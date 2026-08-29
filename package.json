@@ -1,0 +1,40 @@
+{
+  "name": "longpet-family-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LongPet 家属端桌面应用",
+  "author": "LongPet Team",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/app.js",
+    "build:release": "electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "44.0.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "cn.longpet.family.desktop",
+    "productName": "LongPet Family",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}
