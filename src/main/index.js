@@ -6,12 +6,16 @@ const { app, BrowserWindow, shell } = require('electron');
 const { IpcController } = require('./ipc-controller');
 
 let mainWindow = null;
-const ipcController = new IpcController();
 const smokeCapturePath = process.env.LONGPET_FAMILY_SMOKE_CAPTURE?.trim() || '';
 const requestedSmokeView = process.env.LONGPET_FAMILY_SMOKE_VIEW?.trim() || 'dashboard';
+const smokeBaseUrl = process.env.LONGPET_FAMILY_SMOKE_BASE_URL?.trim() || '';
 const smokeView = new Set(['dashboard', 'settings', 'reminders']).has(requestedSmokeView)
   ? requestedSmokeView
   : 'dashboard';
+const ipcController = new IpcController({
+  initialBaseUrl: smokeBaseUrl,
+  initialToken: process.env.LONGPET_FAMILY_SMOKE_TOKEN?.trim() || ''
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -56,6 +60,19 @@ function createWindow() {
     if (!smokeCapturePath) return;
     try {
       await new Promise((resolve) => setTimeout(resolve, 1200));
+      if (smokeBaseUrl) {
+        await mainWindow.webContents.executeJavaScript(`new Promise((resolve, reject) => {
+          const deadline = Date.now() + 7000;
+          const poll = () => {
+            const mode = document.getElementById('connection-mode')?.textContent;
+            const name = document.getElementById('device-name')?.textContent;
+            if (mode === '局域网设备' && name && name !== '--') return resolve(true);
+            if (Date.now() >= deadline) return reject(new Error('Real device dashboard did not load'));
+            setTimeout(poll, 100);
+          };
+          poll();
+        })`);
+      }
       if (smokeView !== 'dashboard') {
         const activeViewId = await mainWindow.webContents.executeJavaScript(
           `(() => {

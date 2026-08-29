@@ -156,6 +156,16 @@ function renderDashboard() {
   setText('sync-time', `同步于 ${new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date())}`);
 }
 
+function settingsAreWritable() {
+  const reported = state.dashboard?.status?.capabilities?.settingsWrite;
+  return reported ?? state.dashboard?.settings?.remoteWritable ?? true;
+}
+
+function remindersAreWritable() {
+  const reported = state.dashboard?.status?.capabilities?.remindersWrite;
+  return reported ?? true;
+}
+
 function renderSettings(settings) {
   byId('volume-input').value = settings.volume;
   byId('volume-output').value = `${settings.volume}%`;
@@ -166,13 +176,18 @@ function renderSettings(settings) {
 
   const volumeCapability = settings.capabilities?.volume;
   const brightnessCapability = settings.capabilities?.brightness;
+  const writable = settingsAreWritable();
   setText('volume-summary', volumeCapability?.summary ?? '设备未报告音量能力');
   setText('brightness-summary', brightnessCapability?.summary ?? '设备未报告背光能力');
-  byId('volume-input').disabled = volumeCapability?.available === false;
-  byId('brightness-input').disabled = brightnessCapability?.available === false;
+  byId('volume-input').disabled = !writable || volumeCapability?.available === false;
+  byId('brightness-input').disabled = !writable || brightnessCapability?.available === false;
+  byId('pet-style-input').disabled = !writable;
+  byId('save-settings-button').disabled = !writable;
   setText(
     'settings-note',
-    brightnessCapability?.available === false
+    !writable
+      ? '当前板端仅开放远程读取；设置写入将在后续小步接入。'
+      : brightnessCapability?.available === false
       ? '当前设备不支持亮度调节；保存时只提交可用设置。'
       : '远程写入会经过设备端 SettingsService 校验。'
   );
@@ -180,6 +195,8 @@ function renderSettings(settings) {
 
 function renderReminders(reminders) {
   const container = byId('reminder-list');
+  const writable = remindersAreWritable();
+  byId('add-reminder-button').disabled = !writable;
   container.replaceChildren();
   if (reminders.length === 0) {
     const empty = document.createElement('div');
@@ -214,7 +231,8 @@ function renderReminders(reminders) {
     edit.className = 'edit-reminder';
     edit.type = 'button';
     edit.dataset.reminderId = reminder.id;
-    edit.textContent = '编辑';
+    edit.textContent = writable ? '编辑' : '只读';
+    edit.disabled = !writable;
     item.append(time, copy, badge, edit);
     container.append(item);
   }
@@ -272,6 +290,10 @@ async function configureConnection(event) {
 async function saveSettings(event) {
   event.preventDefault();
   if (!state.dashboard) return;
+  if (!settingsAreWritable()) {
+    showToast('当前板端仅开放设置读取', true);
+    return;
+  }
   const current = state.dashboard.settings;
   const patch = {
     expectedRevision: current.revision,
@@ -328,6 +350,10 @@ async function submitReminder(event) {
   const action = event.submitter?.value ?? 'default';
   if (!['default', 'delete'].includes(action)) return;
   event.preventDefault();
+  if (!remindersAreWritable()) {
+    showToast('当前板端仅开放提醒读取', true);
+    return;
+  }
   const draft = reminderFormValue();
 
   if (action === 'delete') {

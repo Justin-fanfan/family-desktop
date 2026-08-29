@@ -4,7 +4,7 @@ const { FamilyLinkError } = require('../../shared/family-link-error');
 
 const REMINDER_TYPES = new Set(['medicine', 'water', 'other']);
 const REPEAT_RULES = new Set(['daily', 'weekdays', 'once']);
-const PET_STYLES = new Set(['温和陪伴', '活力伙伴']);
+const PET_STYLES = new Set(['温和陪伴', '活泼陪伴']);
 
 function requireObject(value, fieldName) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

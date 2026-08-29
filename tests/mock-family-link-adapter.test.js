@@ -23,6 +23,7 @@ test('mock adapter provides a complete interactive dashboard', async () => {
   const dashboard = await service.getDashboard();
 
   assert.equal(dashboard.status.device.online, true);
+  assert.equal(dashboard.status.capabilities.settingsWrite, true);
   assert.equal(dashboard.settings.capabilities.volume.available, true);
   assert.ok(dashboard.reminders.length >= 2);
 });

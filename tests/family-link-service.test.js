@@ -40,8 +40,8 @@ test('dashboard aggregates adapter results without exposing transport to UI', as
 
 test('settings validation accepts LongPet ranges and revision', () => {
   assert.deepEqual(
-    validateSettingsPatch({ volume: 80, petStyle: '活力伙伴', expectedRevision: 3 }),
-    { volume: 80, petStyle: '活力伙伴', expectedRevision: 3 }
+    validateSettingsPatch({ volume: 80, petStyle: '活泼陪伴', expectedRevision: 3 }),
+    { volume: 80, petStyle: '活泼陪伴', expectedRevision: 3 }
   );
   assert.throws(
     () => validateSettingsPatch({ volume: 101, expectedRevision: 0 }),

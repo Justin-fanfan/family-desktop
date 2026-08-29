@@ -6,10 +6,10 @@ LongPet 家属端桌面应用 MVP。它提供设备状态查看、远程设置�
 
 - 演示模式已经形成完整可操作闭环：查看状态、保存设置、创建/编辑/删除提醒；
 - 正式 HTTP 客户端及接口校验已经实现；
-- 板端 `FamilyLink` HTTP 服务尚未实现，因此局域网真实模式会在连接测试时明确失败，不会伪装成已接通；
+- 板端已实现首个只读 `FamilyLink` HTTP 闭环，可真实读取状态、设置和提醒；远程写入仍明确禁用；
 - 配对令牌仅保存在 Electron 主进程内存中，关闭应用后清除。
 
-![设备状态](docs/screenshots/dashboard.png)
+![真实开发板设备状态](docs/screenshots/real-dashboard.png)
 
 ## 运行
 
@@ -21,8 +21,10 @@ npm start
 应用默认使用演示数据。点击右上角“切换连接”，可以配置：
 
 - 演示模式：不依赖开发板；
-- 局域网模式：默认地址 `http://10.188.219.51:8787`，需要板端实现 API；
+- 局域网模式：默认地址 `http://10.188.219.51:8787`；
 - 配对令牌：作为 Bearer Token 发送，不写入磁盘。
+
+当前板端只读版本会报告 `settingsWrite=false` 和 `remindersWrite=false`，家属端据此禁用保存、添加与编辑按钮。后续开放写入时不需要改变 Renderer 的网络边界。
 
 ## 测试与 Release 构建
 
@@ -38,7 +40,7 @@ Windows Release 输出目录为：
 release/win-unpacked/
 ```
 
-CI 或本地可通过 `LONGPET_FAMILY_SMOKE_CAPTURE` 指定 PNG 路径，并用 `LONGPET_FAMILY_SMOKE_VIEW` 选择 `dashboard`、`settings` 或 `reminders`。应用会以隐藏窗口加载演示模式、截图并自动退出。普通启动不受这些变量影响。
+CI 或本地可通过 `LONGPET_FAMILY_SMOKE_CAPTURE` 指定 PNG 路径，并用 `LONGPET_FAMILY_SMOKE_VIEW` 选择 `dashboard`、`settings` 或 `reminders`。设置 `LONGPET_FAMILY_SMOKE_BASE_URL` 后会等待真实设备数据加载完成再截图；未设置时使用演示模式。应用截图后自动退出，普通启动不受这些变量影响。
 
 ## 架构
 

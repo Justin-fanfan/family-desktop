@@ -32,7 +32,7 @@ Renderer UI
 - 日期：`YYYY-MM-DD`；
 - 时间：24 小时制 `HH:mm`；
 - 客户端标识：`X-LongPet-Client: family-desktop/0.1`；
-- 鉴权：`Authorization: Bearer <pairing-token>`；
+- 鉴权：设置 `LONGPET_FAMILY_LINK_TOKEN` 后使用 `Authorization: Bearer <pairing-token>`；当前比赛局域网只读阶段允许暂不配置令牌；
 - 密码、配对码和令牌不得出现在 URL、日志或错误详情中。
 
 比赛局域网阶段可以使用 HTTP，但服务只能监听受信任局域网接口。离开受控网络后必须升级为 HTTPS/WSS，并通过中转服务连接，禁止直接把开发板端口映射到公网。
@@ -79,6 +79,12 @@ Renderer UI
 ```json
 {
   "apiVersion": "1.0",
+  "capabilities": {
+    "settingsRead": true,
+    "settingsWrite": false,
+    "remindersRead": true,
+    "remindersWrite": false
+  },
   "device": {
     "id": "longpet-ls-gd-001",
     "name": "客厅 LongPet",
@@ -129,6 +135,7 @@ Renderer UI
   "brightness": 72,
   "petStyle": "温和陪伴",
   "revision": 7,
+  "remoteWritable": false,
   "updatedAt": "2026-08-29T00:30:00+08:00",
   "capabilities": {
     "volume": {
@@ -150,7 +157,7 @@ Renderer UI
 ```json
 {
   "volume": 74,
-  "petStyle": "活力伙伴",
+  "petStyle": "活泼陪伴",
   "expectedRevision": 7
 }
 ```
@@ -159,7 +166,7 @@ Renderer UI
 
 - `volume`：整数，`0..100`；
 - `brightness`：整数，`0..100`；能力不可用时不得写入；
-- `petStyle`：当前为 `温和陪伴` 或 `活力伙伴`；
+- `petStyle`：当前为 `温和陪伴` 或 `活泼陪伴`；
 - `expectedRevision`：非负整数；不匹配时返回 HTTP 409；
 - 至少包含一个可修改字段；
 - 板端先由 `SettingsService` 持久化期望值，再通过既有 `settingApplyRequested` 应用硬件；
@@ -215,7 +222,8 @@ Renderer UI
       "createdAt": "2026-08-20T10:00:00+08:00",
       "updatedAt": "2026-08-28T22:00:00+08:00"
     }
-  ]
+  ],
+  "remoteWritable": false
 }
 ```
 
@@ -268,6 +276,8 @@ Renderer UI
 板端必须调用 `ReminderService::remove()`。版本不匹配返回 HTTP 409，避免家属端删除刚被老人或另一位家属修改的提醒。
 
 ## 7. 配对与鉴权建议
+
+当前板端首个真实连接版本只开放三个 GET 接口。任何已知资源的非 GET 请求返回 HTTP 405 和 `READ_ONLY_API`；家属端必须依据状态接口的能力字段禁用远程写入入口。
 
 当前客户端已经支持 Bearer Token，但板端签发流程尚未实现。建议下一步：
 

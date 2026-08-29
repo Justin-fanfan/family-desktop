@@ -25,13 +25,25 @@ function failure(error) {
 }
 
 class IpcController {
-  constructor() {
+  constructor(options = {}) {
     this.connection = {
       mode: 'mock',
       baseUrl: 'http://10.188.219.51:8787',
       hasToken: false
     };
     this.service = new FamilyLinkService(new MockFamilyLinkAdapter());
+    if (options.initialBaseUrl) {
+      const adapter = new HttpFamilyLinkAdapter({
+        baseUrl: options.initialBaseUrl,
+        token: options.initialToken
+      });
+      this.service = new FamilyLinkService(adapter);
+      this.connection = {
+        mode: 'http',
+        baseUrl: adapter.baseUrl,
+        hasToken: Boolean(adapter.token)
+      };
+    }
     this.registered = false;
   }
 

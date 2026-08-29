@@ -73,6 +73,12 @@ class MockFamilyLinkAdapter {
     await this.wait();
     return {
       apiVersion: '1.0',
+      capabilities: {
+        settingsRead: true,
+        settingsWrite: true,
+        remindersRead: true,
+        remindersWrite: true
+      },
       device: {
         id: 'longpet-demo-001',
         name: '客厅 LongPet',
