@@ -5,7 +5,8 @@ const test = require('node:test');
 
 global.window = {};
 require('../src/renderer/video-call-media-adapter.js');
-const { encodeFrame, decodeFrame, deriveMediaUrl, STREAM } = global.window.LongPetMediaProtocol;
+const { encodeFrame, decodeFrame, deriveMediaUrl, STREAM, VIDEO_SETTINGS } =
+  global.window.LongPetMediaProtocol;
 
 test('binary media frame preserves versioned header and payload', () => {
   const payload = new Uint8Array([1, 2, 3, 4]);
@@ -28,4 +29,12 @@ test('media URL derives host from configured FamilyLink URL and only replaces po
     deriveMediaUrl('https://longpet.lan/api', { mediaPort: 9443 }),
     'wss://longpet.lan:9443/media/v1'
   );
+});
+
+test('family video sent to LongPet uses the low-CPU profile', () => {
+  assert.deepEqual(VIDEO_SETTINGS, {
+    familyVideoWidth: 480,
+    familyVideoHeight: 360,
+    familyVideoIntervalMs: 125
+  });
 });

@@ -6,6 +6,9 @@
   const HEADER_SIZE = 24;
   const STREAM = { deviceVideo: 1, familyVideo: 2, deviceAudio: 3, familyAudio: 4, control: 5 };
   const MAX_SOCKET_BACKLOG = 256 * 1024;
+  const FAMILY_VIDEO_WIDTH = 480;
+  const FAMILY_VIDEO_HEIGHT = 360;
+  const FAMILY_VIDEO_INTERVAL_MS = 125;
 
   function deriveMediaUrl(baseUrl, call) {
     const url = new URL(baseUrl);
@@ -67,8 +70,8 @@
       this.audioStream = null;
       this.videoTimer = null;
       this.videoCanvas = document.createElement('canvas');
-      this.videoCanvas.width = 640;
-      this.videoCanvas.height = 480;
+      this.videoCanvas.width = FAMILY_VIDEO_WIDTH;
+      this.videoCanvas.height = FAMILY_VIDEO_HEIGHT;
       this.videoEncoding = false;
       this.remoteDecodeBusy = false;
       this.pendingRemoteJpeg = null;
@@ -142,7 +145,11 @@
     async startVideo() {
       try {
         this.videoStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 20 } },
+          video: {
+            width: { ideal: FAMILY_VIDEO_WIDTH },
+            height: { ideal: FAMILY_VIDEO_HEIGHT },
+            frameRate: { ideal: 8, max: 10 }
+          },
           audio: false
         });
         this.localVideo.srcObject = this.videoStream;
@@ -166,10 +173,10 @@
             || this.videoEncoding || this.socket.bufferedAmount > MAX_SOCKET_BACKLOG
             || this.localVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
         this.videoEncoding = true;
-        const sourceWidth = this.localVideo.videoWidth || 640;
-        const sourceHeight = this.localVideo.videoHeight || 480;
+        const sourceWidth = this.localVideo.videoWidth || FAMILY_VIDEO_WIDTH;
+        const sourceHeight = this.localVideo.videoHeight || FAMILY_VIDEO_HEIGHT;
         const sourceAspect = sourceWidth / sourceHeight;
-        const targetAspect = 640 / 480;
+        const targetAspect = FAMILY_VIDEO_WIDTH / FAMILY_VIDEO_HEIGHT;
         let sourceX = 0;
         let sourceY = 0;
         let cropWidth = sourceWidth;
@@ -182,7 +189,7 @@
           sourceY = (sourceHeight - cropHeight) / 2;
         }
         context.drawImage(this.localVideo, sourceX, sourceY, cropWidth, cropHeight,
-          0, 0, 640, 480);
+          0, 0, FAMILY_VIDEO_WIDTH, FAMILY_VIDEO_HEIGHT);
         this.videoCanvas.toBlob(async (blob) => {
           try {
             if (blob && this.socket?.readyState === WebSocket.OPEN
@@ -192,8 +199,8 @@
           } finally {
             this.videoEncoding = false;
           }
-        }, 'image/jpeg', 0.68);
-      }, 67);
+        }, 'image/jpeg', 0.6);
+      }, FAMILY_VIDEO_INTERVAL_MS);
     }
 
     async startAudioCapture() {
@@ -354,5 +361,15 @@
   }
 
   window.LongPetVideoCallMediaAdapter = VideoCallMediaAdapter;
-  window.LongPetMediaProtocol = Object.freeze({ encodeFrame, decodeFrame, deriveMediaUrl, STREAM });
+  window.LongPetMediaProtocol = Object.freeze({
+    encodeFrame,
+    decodeFrame,
+    deriveMediaUrl,
+    STREAM,
+    VIDEO_SETTINGS: Object.freeze({
+      familyVideoWidth: FAMILY_VIDEO_WIDTH,
+      familyVideoHeight: FAMILY_VIDEO_HEIGHT,
+      familyVideoIntervalMs: FAMILY_VIDEO_INTERVAL_MS
+    })
+  });
 })();

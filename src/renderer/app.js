@@ -27,7 +27,9 @@ const state = {
   callPollBusy: false,
   notifiedCallId: null,
   mediaStatus: '等待设备呼叫',
-  mediaSyncPromise: Promise.resolve()
+  mediaSyncPromise: Promise.resolve(),
+  timedCallId: null,
+  callTimerStartedAt: 0
 };
 
 const byId = (id) => document.getElementById(id);
@@ -272,8 +274,7 @@ function renderVideoCall() {
   setText('call-state-detail', detail);
   setText('call-remote-name', state.dashboard?.status?.device?.name || 'LongPet');
   setText('call-id', call?.callId ? `通话编号 ${call.callId.slice(0, 8)}` : '--');
-  const connectedAt = call?.connectedAt ? new Date(call.connectedAt).getTime() : 0;
-  const elapsed = connectedAt ? Math.max(0, Math.floor((Date.now() - connectedAt) / 1000)) : 0;
+  const elapsed = callElapsedSeconds(call);
   setText('call-duration', `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`);
   setText('call-media-state', state.mediaStatus);
   const active = ['outgoing_ringing', 'notifying_device', 'connecting_media', 'connected']
@@ -287,6 +288,19 @@ function renderVideoCall() {
   byId('accept-call-button').classList.toggle('hidden', call?.state !== 'outgoing_ringing');
   byId('reject-call-button').classList.toggle('hidden', call?.state !== 'outgoing_ringing');
   byId('hangup-call-button').classList.toggle('hidden', !active || call?.state === 'outgoing_ringing');
+}
+
+function callElapsedSeconds(call) {
+  if (!call?.callId || call.state !== 'connected') {
+    state.timedCallId = null;
+    state.callTimerStartedAt = 0;
+    return 0;
+  }
+  if (state.timedCallId !== call.callId) {
+    state.timedCallId = call.callId;
+    state.callTimerStartedAt = performance.now();
+  }
+  return Math.max(0, Math.floor((performance.now() - state.callTimerStartedAt) / 1000));
 }
 
 function queueMediaSync(call) {
