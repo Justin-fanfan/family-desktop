@@ -13,7 +13,10 @@ const CHANNELS = [
   'family:settings:update',
   'family:reminders:create',
   'family:reminders:update',
-  'family:reminders:delete'
+  'family:reminders:delete',
+  'family:video-call:get',
+  'family:video-call:start',
+  'family:video-call:act'
 ];
 
 function success(data) {
@@ -28,7 +31,7 @@ class IpcController {
   constructor(options = {}) {
     this.connection = {
       mode: 'mock',
-      baseUrl: 'http://10.188.219.51:8787',
+      baseUrl: 'http://10.240.178.51:8787',
       hasToken: false
     };
     this.service = new FamilyLinkService(new MockFamilyLinkAdapter());
@@ -71,6 +74,13 @@ class IpcController {
     );
     this.handle('family:reminders:delete', async (_event, request) =>
       this.service.deleteReminder(request)
+    );
+    this.handle('family:video-call:get', async () => this.service.getVideoCall());
+    this.handle('family:video-call:start', async (_event, request) =>
+      this.service.startVideoCall(request)
+    );
+    this.handle('family:video-call:act', async (_event, request) =>
+      this.service.applyVideoCallAction(request)
     );
   }
 

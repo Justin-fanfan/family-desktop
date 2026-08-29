@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src ws: wss:; media-src 'self' blob:; object-src 'none'; base-uri 'none'"
     >
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LongPet 家属端</title>
@@ -30,6 +30,9 @@
           </button>
           <button class="nav-button" data-view="reminders" type="button">
             <span class="nav-icon">◷</span>提醒管理
+          </button>
+          <button class="nav-button" data-view="video-call" type="button">
+            <span class="nav-icon">▣</span>语音 / 视频通话
           </button>
         </nav>
 
@@ -172,6 +175,34 @@
             </div>
           </div>
         </section>
+
+        <section class="view" id="view-video-call" aria-labelledby="page-title">
+          <div class="call-layout">
+            <article class="panel call-stage">
+              <canvas class="call-remote-video hidden" id="call-remote-video"></canvas>
+              <video class="call-local-video hidden" id="call-local-video" muted playsinline></video>
+              <div class="call-placeholder" id="call-placeholder">
+                <span class="call-symbol">LP</span>
+                <strong id="call-state-title">当前没有通话</strong>
+                <p id="call-state-detail">LongPet 发起呼叫后将在这里提醒您</p>
+                <span class="call-duration" id="call-duration">00:00</span>
+                <small id="call-id">--</small>
+              </div>
+            </article>
+            <aside class="panel call-controls">
+              <span class="eyebrow">通话控制</span>
+              <h2 id="call-remote-name">LongPet</h2>
+              <p id="call-media-state">等待设备呼叫</p>
+              <div class="call-actions">
+                <button class="button primary" id="start-voice-call-button" type="button">发起语音通话</button>
+                <button class="button primary" id="start-video-call-button" type="button">发起视频通话</button>
+                <button class="button primary hidden" id="accept-call-button" type="button">接听</button>
+                <button class="button danger hidden" id="reject-call-button" type="button">拒绝</button>
+                <button class="button danger hidden" id="hangup-call-button" type="button">挂断</button>
+              </div>
+            </aside>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -191,7 +222,7 @@
         </label>
         <label class="field-row">
           <span>设备 API 地址</span>
-          <input id="base-url-input" type="url" value="http://10.188.219.51:8787" spellcheck="false">
+          <input id="base-url-input" type="url" value="http://10.240.178.51:8787" spellcheck="false">
         </label>
         <label class="field-row">
           <span>配对令牌</span>
@@ -249,6 +280,7 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./video-call-media-adapter.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

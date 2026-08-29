@@ -126,3 +126,37 @@ test('HTTP adapter preserves structured device conflicts', async () => {
     );
   });
 });
+
+test('HTTP adapter maps video call state and action endpoints', async () => {
+  const requests = [];
+  await withServer(async (request, response) => {
+    const body = await readJson(request);
+    requests.push({ method: request.method, url: request.url, body });
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({
+      callId: 'call-9',
+      state: request.method === 'POST' ? 'connected' : 'outgoing_ringing',
+      revision: request.method === 'POST' ? 2 : 1
+    }));
+  }, async (baseUrl) => {
+    const adapter = new HttpFamilyLinkAdapter({ baseUrl, token: 'pairing-token' });
+    const call = await adapter.getVideoCall();
+    await adapter.startVideoCall({ mode: 'voice' });
+    const accepted = await adapter.applyVideoCallAction({
+      callId: call.callId,
+      action: 'accept',
+      expectedRevision: call.revision
+    });
+    assert.equal(accepted.state, 'connected');
+  });
+
+  assert.deepEqual(requests, [
+    { method: 'GET', url: '/api/v1/video-call', body: null },
+    { method: 'POST', url: '/api/v1/video-call', body: { mode: 'voice' } },
+    {
+      method: 'POST',
+      url: '/api/v1/video-call/actions',
+      body: { callId: 'call-9', action: 'accept', expectedRevision: 1 }
+    }
+  ]);
+});

@@ -51,6 +51,18 @@ class HttpFamilyLinkAdapter {
     return response.items;
   }
 
+  async getVideoCall() {
+    return this.request('/api/v1/video-call');
+  }
+
+  async startVideoCall(payload) {
+    return this.request('/api/v1/video-call', { method: 'POST', body: payload });
+  }
+
+  async applyVideoCallAction(payload) {
+    return this.request('/api/v1/video-call/actions', { method: 'POST', body: payload });
+  }
+
   async createReminder(payload) {
     return this.request('/api/v1/reminders', { method: 'POST', body: payload });
   }

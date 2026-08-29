@@ -61,6 +61,21 @@ class MockFamilyLinkAdapter {
       }
     ];
     this.nextReminderId = 3;
+    this.videoCall = clone(options.videoCall ?? {
+      callId: '',
+      state: 'idle',
+      mode: 'video',
+      direction: 'device_to_family',
+      remoteName: 'LongPet',
+      startedAt: null,
+      updatedAt: null,
+      revision: 0,
+      mediaReady: false,
+      mediaPort: 8788,
+      mediaToken: 'mock-media-token',
+      errorCode: null,
+      errorMessage: null
+    });
   }
 
   async wait() {
@@ -77,7 +92,8 @@ class MockFamilyLinkAdapter {
         settingsRead: true,
         settingsWrite: true,
         remindersRead: true,
-        remindersWrite: true
+        remindersWrite: true,
+        videoCallSignaling: true
       },
       device: {
         id: 'longpet-demo-001',
@@ -184,6 +200,70 @@ class MockFamilyLinkAdapter {
     }
     this.reminders.splice(index, 1);
     return { deleted: true, id };
+  }
+
+  async getVideoCall() {
+    await this.wait();
+    return clone(this.videoCall);
+  }
+
+  async startVideoCall(payload) {
+    await this.wait();
+    if (['outgoing_ringing', 'notifying_device', 'connecting_media', 'connected']
+      .includes(this.videoCall.state)) {
+      throw new FamilyLinkError('DEVICE_BUSY', '设备正在通话，请稍后再试', { status: 409 });
+    }
+    this.videoCall = {
+      ...this.videoCall,
+      callId: `mock-${Date.now()}`,
+      state: 'notifying_device',
+      mode: payload.mode,
+      direction: 'family_to_device',
+      startedAt: nowIso(),
+      connectedAt: null,
+      updatedAt: nowIso(),
+      revision: this.videoCall.revision + 1,
+      mediaReady: false,
+      errorCode: null,
+      errorMessage: null
+    };
+    return clone(this.videoCall);
+  }
+
+  async applyVideoCallAction(payload) {
+    await this.wait();
+    if (payload.callId !== this.videoCall.callId) {
+      throw new FamilyLinkError('CALL_MISMATCH', '通话标识与当前通话不一致', {
+        status: 409
+      });
+    }
+    if (payload.expectedRevision !== this.videoCall.revision) {
+      throw new FamilyLinkError('REVISION_CONFLICT', '通话状态已变化，请刷新后重试', {
+        status: 409
+      });
+    }
+    const allowed = payload.action === 'accept'
+      ? this.videoCall.state === 'outgoing_ringing'
+      : payload.action === 'reject'
+      ? this.videoCall.state === 'outgoing_ringing'
+      : ['outgoing_ringing', 'notifying_device', 'connecting_media', 'connected']
+        .includes(this.videoCall.state);
+    if (!allowed) {
+      throw new FamilyLinkError('INVALID_CALL_STATE', '当前通话不能执行该操作', {
+        status: 409
+      });
+    }
+    this.videoCall.state = payload.action === 'accept'
+      ? 'connecting_media'
+      : payload.action === 'reject'
+      ? 'rejected'
+      : payload.action === 'fail'
+      ? 'failed' : 'ended';
+    this.videoCall.errorCode = payload.errorCode ?? null;
+    this.videoCall.errorMessage = payload.errorMessage ?? null;
+    this.videoCall.revision += 1;
+    this.videoCall.updatedAt = nowIso();
+    return clone(this.videoCall);
   }
 }
 

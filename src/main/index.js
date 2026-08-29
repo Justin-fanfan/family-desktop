@@ -2,20 +2,33 @@
 
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, session } = require('electron');
 const { IpcController } = require('./ipc-controller');
 
 let mainWindow = null;
 const smokeCapturePath = process.env.LONGPET_FAMILY_SMOKE_CAPTURE?.trim() || '';
 const requestedSmokeView = process.env.LONGPET_FAMILY_SMOKE_VIEW?.trim() || 'dashboard';
 const smokeBaseUrl = process.env.LONGPET_FAMILY_SMOKE_BASE_URL?.trim() || '';
-const smokeView = new Set(['dashboard', 'settings', 'reminders']).has(requestedSmokeView)
+const smokeView = new Set(['dashboard', 'settings', 'reminders', 'video-call']).has(requestedSmokeView)
   ? requestedSmokeView
   : 'dashboard';
 const ipcController = new IpcController({
   initialBaseUrl: smokeBaseUrl,
   initialToken: process.env.LONGPET_FAMILY_SMOKE_TOKEN?.trim() || ''
 });
+
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
+function configureMediaPermissions() {
+  const allowed = (webContents, permission) =>
+    webContents === mainWindow?.webContents && permission === 'media';
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) =>
+    allowed(webContents, permission)
+  );
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) =>
+    callback(allowed(webContents, permission))
+  );
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -106,6 +119,7 @@ function createWindow() {
 app.whenReady().then(() => {
   ipcController.register();
   createWindow();
+  configureMediaPermissions();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

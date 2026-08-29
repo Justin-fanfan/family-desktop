@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/app.js && node --check scripts/real-device-write-smoke.js",
+    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/video-call-media-adapter.js && node --check src/renderer/app.js && node --check scripts/real-device-write-smoke.js",
     "smoke:real-write": "node scripts/real-device-write-smoke.js",
     "build:release": "electron-builder --win dir"
   },

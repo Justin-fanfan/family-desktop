@@ -68,3 +68,47 @@ test('mock settings rejects stale writes', async () => {
     (error) => error.code === 'REVISION_CONFLICT'
   );
 });
+
+test('mock video call accepts and hangs up with optimistic revisions', async () => {
+  const service = new FamilyLinkService(new MockFamilyLinkAdapter({
+    delayMs: 0,
+    videoCall: {
+      callId: 'demo-call',
+      state: 'outgoing_ringing',
+      direction: 'device_to_family',
+      remoteName: 'LongPet',
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      revision: 1,
+      mediaReady: false
+    }
+  }));
+
+  const ringing = await service.getVideoCall();
+  const connected = await service.applyVideoCallAction({
+    callId: ringing.callId,
+    action: 'accept',
+    expectedRevision: ringing.revision
+  });
+  assert.equal(connected.state, 'connecting_media');
+
+  const ended = await service.applyVideoCallAction({
+    callId: connected.callId,
+    action: 'hangup',
+    expectedRevision: connected.revision
+  });
+  assert.equal(ended.state, 'ended');
+  assert.equal(ended.revision, 3);
+});
+
+test('mock family call selects voice mode and reports busy while active', async () => {
+  const service = new FamilyLinkService(new MockFamilyLinkAdapter({ delayMs: 0 }));
+  const started = await service.startVideoCall({ mode: 'voice' });
+  assert.equal(started.mode, 'voice');
+  assert.equal(started.direction, 'family_to_device');
+  assert.equal(started.state, 'notifying_device');
+  await assert.rejects(
+    service.startVideoCall({ mode: 'video' }),
+    (error) => error.code === 'DEVICE_BUSY'
+  );
+});

@@ -85,7 +85,8 @@ Renderer UI
     "settingsRead": true,
     "settingsWrite": true,
     "remindersRead": true,
-    "remindersWrite": true
+    "remindersWrite": true,
+    "videoCallSignaling": true
   },
   "device": {
     "id": "longpet-ls-gd-001",
@@ -265,7 +266,85 @@ Renderer UI
 
 板端必须调用 `ReminderService::remove()`。版本不匹配返回 HTTP 409，避免家属端删除刚被老人或另一位家属修改的提醒。
 
-## 7. 配对与鉴权建议
+## 7. 语音 / 视频通话控制接口
+
+这些 JSON 接口只负责鉴权、呼叫状态和媒体会话参数。PCM/JPEG 帧使用独立 WebSocket 媒体端口传输，详见 `VIDEO_CALL_MEDIA_PROTOCOL.md`。以下接口均沿用 FamilyLink Bearer Token。
+
+### `POST /api/v1/video-call`
+
+家属端主动发起呼叫。`mode` 只允许 `voice` 或 `video`。
+
+```json
+{ "mode": "voice" }
+```
+
+成功返回 HTTP 201。设备会先进入 `notifying_device` 并播放一次对应提示音；设备已有活跃通话时返回 HTTP 409：
+
+```json
+{
+  "error": {
+    "code": "DEVICE_BUSY",
+    "message": "设备正在通话，请稍后再试"
+  }
+}
+```
+
+鉴权失败返回 401，且不会播放提示音。摄像头或媒体端口预热失败返回 503 `MEDIA_INITIALIZATION_FAILED`。
+
+### `GET /api/v1/video-call`
+
+```json
+{
+  "callId": "7aeaa037-658e-4b39-b5c6-842bb9a6b723",
+  "state": "connecting_media",
+  "mode": "video",
+  "direction": "family_to_device",
+  "remoteName": "家属端",
+  "startedAt": "2026-08-29T12:00:00Z",
+  "connectedAt": null,
+  "updatedAt": "2026-08-29T12:00:04Z",
+  "revision": 2,
+  "mediaReady": false,
+  "mediaProtocolVersion": 1,
+  "mediaPort": 8788,
+  "mediaToken": "per-call-random-token",
+  "errorCode": null,
+  "errorMessage": null
+}
+```
+
+家属端用已配置 FamilyLink URL 的主机名推导媒体地址，只替换协议和 `mediaPort`。例如 `http://10.240.178.51:8787` 推导为 `ws://10.240.178.51:8788/media/v1`，代码不保存固定板端 IP。
+
+| state | 含义 |
+|---|---|
+| `idle` | 当前没有通话 |
+| `outgoing_ringing` | LongPet 主动呼叫家属端，等待接听 |
+| `notifying_device` | 家属端呼叫已鉴权，板端正在播放一次提示音 |
+| `connecting_media` | 提示音已结束，双方正在打开音频并鉴权媒体通道 |
+| `connected` | 双向媒体通道已经可用，此时 `mediaReady=true` |
+| `rejected` | 家属端拒绝了 LongPet 主动呼叫 |
+| `ended` | 任一方正常挂断 |
+| `failed` | 权限、设备或网络失败，读取 `errorCode/errorMessage` |
+
+### `POST /api/v1/video-call/actions`
+
+```json
+{
+  "callId": "7aeaa037-658e-4b39-b5c6-842bb9a6b723",
+  "action": "hangup",
+  "expectedRevision": 4
+}
+```
+
+- `accept`/`reject` 只用于 LongPet 主动发起的 `outgoing_ringing`；
+- 家属端主动呼叫由 LongPet 自动接通，不发送 `accept`；
+- `hangup` 可用于所有活跃状态，包括提示音尚未结束时的取消；
+- `fail` 用于家属端报告摄像头、麦克风或权限错误，可额外传 `errorCode` 与 `errorMessage`；
+- `callId` 和 `expectedRevision` 必须匹配当前快照，否则返回 HTTP 409 `CALL_MISMATCH` 或 `REVISION_CONFLICT`。
+
+家属端每秒读取一次状态；只在 `connected && mediaReady` 时显示“通话已连接”，不会再把控制信令成功误报为媒体已连接。
+
+## 8. 配对与鉴权建议
 
 当前板端已经要求 Bearer Token 并开放设置和提醒写入；家属端仍必须依据状态接口的能力字段决定是否启用每类写操作。Token 目前由运维配置，板端签发流程尚未实现。建议下一步：
 
@@ -278,7 +357,7 @@ Renderer UI
 
 比赛阶段不得直接把 root SSH 密码包装成家属端鉴权，也不得让 Electron 通过 SSH 修改数据库或 systemd。
 
-## 8. 后续事件接口
+## 9. 后续事件接口
 
 当前 MVP 使用手动刷新。后续可增加 `/api/v1/events` WebSocket，用于：
 

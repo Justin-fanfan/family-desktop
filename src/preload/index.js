@@ -21,5 +21,8 @@ contextBridge.exposeInMainWorld('familyDesktop', Object.freeze({
   updateSettings: (request) => invoke('family:settings:update', request),
   createReminder: (request) => invoke('family:reminders:create', request),
   updateReminder: (request) => invoke('family:reminders:update', request),
-  deleteReminder: (request) => invoke('family:reminders:delete', request)
+  deleteReminder: (request) => invoke('family:reminders:delete', request),
+  getVideoCall: () => invoke('family:video-call:get'),
+  startVideoCall: (request) => invoke('family:video-call:start', request),
+  applyVideoCallAction: (request) => invoke('family:video-call:act', request)
 }));

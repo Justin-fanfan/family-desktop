@@ -3,7 +3,8 @@
 const PAGE_TITLES = {
   dashboard: '设备状态',
   settings: '远程设置',
-  reminders: '提醒管理'
+  reminders: '提醒管理',
+  'video-call': '语音 / 视频通话'
 };
 
 const TYPE_LABELS = { medicine: '用药', water: '喝水', other: '其他' };
@@ -18,12 +19,27 @@ const STATUS_LABELS = {
 const state = {
   connection: null,
   dashboard: null,
+  videoCall: null,
   activeView: 'dashboard',
   busy: false,
-  toastTimer: null
+  toastTimer: null,
+  callPollTimer: null,
+  callPollBusy: false,
+  notifiedCallId: null,
+  mediaStatus: '等待设备呼叫',
+  mediaSyncPromise: Promise.resolve()
 };
 
 const byId = (id) => document.getElementById(id);
+const callMedia = new window.LongPetVideoCallMediaAdapter({
+  remoteCanvas: byId('call-remote-video'),
+  localVideo: byId('call-local-video'),
+  onStatus: (message) => {
+    state.mediaStatus = message;
+    if (state.videoCall) renderVideoCall();
+  },
+  onFailure: (error) => { void reportMediaFailure(error); }
+});
 
 function setText(id, value) {
   byId(id).textContent = value ?? '--';
@@ -238,6 +254,171 @@ function renderReminders(reminders) {
   }
 }
 
+function renderVideoCall() {
+  const call = state.videoCall;
+  const modeName = call?.mode === 'voice' ? '语音' : '视频';
+  const stateText = {
+    idle: ['当前没有通话', 'LongPet 发起呼叫后将在这里提醒您'],
+    outgoing_ringing: [`LongPet 正在发起${modeName}通话`, '请接听或拒绝本次通话'],
+    notifying_device: [`正在发起${modeName}通话`, '正在通知 LongPet，设备将在提示音结束后自动接通'],
+    connecting_media: ['正在建立媒体通道', '正在打开双方麦克风和扬声器'],
+    connected: [`${modeName}通话已连接`, '双向媒体正在实时传输'],
+    rejected: ['已拒绝本次通话', 'LongPet 端会显示家属端暂时无法接听'],
+    ended: ['通话已结束', '可以再次发起语音或视频通话'],
+    failed: ['通话连接失败', call?.errorMessage || '请检查媒体权限、设备和网络']
+  };
+  const [title, detail] = stateText[call?.state] ?? stateText.idle;
+  setText('call-state-title', title);
+  setText('call-state-detail', detail);
+  setText('call-remote-name', state.dashboard?.status?.device?.name || 'LongPet');
+  setText('call-id', call?.callId ? `通话编号 ${call.callId.slice(0, 8)}` : '--');
+  const connectedAt = call?.connectedAt ? new Date(call.connectedAt).getTime() : 0;
+  const elapsed = connectedAt ? Math.max(0, Math.floor((Date.now() - connectedAt) / 1000)) : 0;
+  setText('call-duration', `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`);
+  setText('call-media-state', state.mediaStatus);
+  const active = ['outgoing_ringing', 'notifying_device', 'connecting_media', 'connected']
+    .includes(call?.state);
+  const videoActive = active && call?.mode === 'video';
+  byId('call-placeholder').parentElement.classList.toggle('video-active', videoActive);
+  byId('call-remote-video').classList.toggle('hidden', !videoActive);
+  byId('call-local-video').classList.toggle('hidden', !videoActive);
+  byId('start-voice-call-button').classList.toggle('hidden', active);
+  byId('start-video-call-button').classList.toggle('hidden', active);
+  byId('accept-call-button').classList.toggle('hidden', call?.state !== 'outgoing_ringing');
+  byId('reject-call-button').classList.toggle('hidden', call?.state !== 'outgoing_ringing');
+  byId('hangup-call-button').classList.toggle('hidden', !active || call?.state === 'outgoing_ringing');
+}
+
+function queueMediaSync(call) {
+  state.mediaSyncPromise = state.mediaSyncPromise
+    .catch(() => {})
+    .then(() => syncMediaForCall(call));
+  return state.mediaSyncPromise;
+}
+
+async function syncMediaForCall(call) {
+  const terminal = !call?.callId
+    || ['idle', 'rejected', 'ended', 'failed'].includes(call.state);
+  if (terminal) {
+    await callMedia.stop();
+    state.mediaStatus = call?.state === 'failed'
+      ? (call.errorMessage || '媒体通道失败') : '等待设备呼叫';
+    return;
+  }
+  if (call.state === 'outgoing_ringing') {
+    state.mediaStatus = '收到来自 LongPet 的呼叫';
+    return;
+  }
+  if (state.connection?.mode !== 'http') {
+    state.mediaStatus = '演示模式不连接真实媒体设备';
+    return;
+  }
+  await callMedia.connect(state.connection.baseUrl, call);
+  if (call.state === 'connecting_media' || call.state === 'connected') {
+    await callMedia.enableAudio();
+  }
+}
+
+async function reportMediaFailure(error) {
+  const message = error?.message || '家属端媒体初始化失败';
+  showToast(message, true);
+  try {
+    const current = await window.familyDesktop.getVideoCall();
+    state.videoCall = current;
+    if (['outgoing_ringing', 'notifying_device', 'connecting_media', 'connected']
+      .includes(current.state)) {
+      state.videoCall = await window.familyDesktop.applyVideoCallAction({
+        callId: current.callId,
+        action: 'fail',
+        expectedRevision: current.revision,
+        errorCode: error?.code || 'FAMILY_MEDIA_FAILED',
+        errorMessage: message
+      });
+    }
+  } catch (reportError) {
+    showToast(`${message}；设备状态同步失败：${errorMessage(reportError)}`, true);
+  } finally {
+    await callMedia.stop();
+    renderVideoCall();
+  }
+}
+
+async function refreshVideoCall(silent = true) {
+  if (state.callPollBusy) return state.videoCall;
+  state.callPollBusy = true;
+  try {
+    const previousCallId = state.videoCall?.callId;
+    state.videoCall = await window.familyDesktop.getVideoCall();
+    renderVideoCall();
+    void queueMediaSync(state.videoCall).catch((error) => reportMediaFailure(error));
+    if (state.videoCall.state === 'outgoing_ringing'
+        && state.videoCall.callId
+        && state.notifiedCallId !== state.videoCall.callId) {
+      state.notifiedCallId = state.videoCall.callId;
+      switchView('video-call');
+      showToast('LongPet 正在发起视频通话');
+    } else if (previousCallId && state.videoCall.callId !== previousCallId) {
+      state.notifiedCallId = null;
+    }
+    return state.videoCall;
+  } catch (error) {
+    if (!silent) showToast(errorMessage(error), true);
+    return null;
+  } finally {
+    state.callPollBusy = false;
+  }
+}
+
+async function applyVideoCallAction(action, button) {
+  if (!state.videoCall?.callId) return;
+  await runBusy(async () => {
+    try {
+      if (action === 'hangup') callMedia.beginTermination();
+      state.videoCall = await window.familyDesktop.applyVideoCallAction({
+        callId: state.videoCall.callId,
+        action,
+        expectedRevision: state.videoCall.revision
+      });
+      renderVideoCall();
+      if (action === 'hangup') await callMedia.stop(true);
+      else void queueMediaSync(state.videoCall).catch((error) => reportMediaFailure(error));
+      showToast(action === 'accept' ? '已接听，正在建立媒体通道'
+        : action === 'reject' ? '已拒绝通话' : '通话已挂断');
+    } catch (error) {
+      showToast(errorMessage(error), true);
+      await refreshVideoCall(true);
+    }
+  }, button);
+}
+
+async function startVideoCall(mode, button) {
+  if (state.connection?.mode !== 'http') {
+    showToast('请先连接真实 LongPet 设备再发起通话', true);
+    return;
+  }
+  await runBusy(async () => {
+    try {
+      state.mediaStatus = '正在请求设备建立通话';
+      state.videoCall = await window.familyDesktop.startVideoCall({ mode });
+      switchView('video-call');
+      renderVideoCall();
+      await queueMediaSync(state.videoCall);
+      showToast(mode === 'video' ? '正在通知设备并预热摄像头' : '正在通知设备');
+    } catch (error) {
+      showToast(errorMessage(error), true);
+      await callMedia.stop();
+      await refreshVideoCall(true);
+    }
+  }, button);
+}
+
+function startVideoCallPolling() {
+  clearInterval(state.callPollTimer);
+  state.callPollTimer = setInterval(() => {
+    void refreshVideoCall(true);
+  }, 1000);
+}
+
 async function refreshDashboard(silent = false) {
   try {
     state.dashboard = await window.familyDesktop.getDashboard();
@@ -271,6 +452,7 @@ async function configureConnection(event) {
   const button = byId('connect-submit-button');
   await runBusy(async () => {
     try {
+      await callMedia.stop();
       const mock = byId('mock-mode-input').checked;
       state.connection = await window.familyDesktop.configureConnection({
         mode: mock ? 'mock' : 'http',
@@ -280,6 +462,7 @@ async function configureConnection(event) {
       byId('token-input').value = '';
       byId('connection-dialog').close();
       await refreshDashboard(true);
+      await refreshVideoCall(true);
       showToast(mock ? '已进入演示模式' : 'LongPet 连接成功');
     } catch (error) {
       showToast(errorMessage(error), true);
@@ -423,6 +606,21 @@ function registerEvents() {
     if (reminder) openReminderDialog(reminder);
   });
   byId('reminder-form').addEventListener('submit', submitReminder);
+  byId('start-voice-call-button').addEventListener('click', () =>
+    startVideoCall('voice', byId('start-voice-call-button'))
+  );
+  byId('start-video-call-button').addEventListener('click', () =>
+    startVideoCall('video', byId('start-video-call-button'))
+  );
+  byId('accept-call-button').addEventListener('click', () =>
+    applyVideoCallAction('accept', byId('accept-call-button'))
+  );
+  byId('reject-call-button').addEventListener('click', () =>
+    applyVideoCallAction('reject', byId('reject-call-button'))
+  );
+  byId('hangup-call-button').addEventListener('click', () =>
+    applyVideoCallAction('hangup', byId('hangup-call-button'))
+  );
 }
 
 async function initialize() {
@@ -431,10 +629,17 @@ async function initialize() {
     state.connection = await window.familyDesktop.getConnection();
     renderConnection();
     await refreshDashboard(true);
+    await refreshVideoCall(true);
   } catch (error) {
     showToast(errorMessage(error), true);
     openConnectionDialog();
   }
+  startVideoCallPolling();
 }
+
+window.addEventListener('beforeunload', () => {
+  clearInterval(state.callPollTimer);
+  void callMedia.stop();
+});
 
 void initialize();

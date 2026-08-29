@@ -6,7 +6,9 @@ const test = require('node:test');
 const {
   FamilyLinkService,
   validateReminderDraft,
-  validateSettingsPatch
+  validateSettingsPatch,
+  validateVideoCallAction,
+  validateVideoCallStart
 } = require('../src/main/services/family-link-service');
 
 function validReminder(overrides = {}) {
@@ -80,4 +82,39 @@ test('service forwards update id separately and keeps expected revision', async 
   assert.equal(captured.id, 7);
   assert.equal(captured.payload.expectedRevision, 4);
   assert.equal(Object.hasOwn(captured.payload, 'id'), false);
+});
+
+test('video call action validation and forwarding preserve call revision', async () => {
+  let captured = null;
+  const adapter = {
+    async applyVideoCallAction(request) {
+      captured = request;
+      return { ...request, state: 'connected', revision: request.expectedRevision + 1 };
+    }
+  };
+  const service = new FamilyLinkService(adapter);
+  const request = { callId: 'call-123', action: 'accept', expectedRevision: 4 };
+
+  const result = await service.applyVideoCallAction(request);
+
+  assert.deepEqual(captured, request);
+  assert.equal(result.state, 'connected');
+  assert.deepEqual(validateVideoCallAction(request), request);
+  assert.throws(
+    () => validateVideoCallAction({ ...request, action: 'start' }),
+    (error) => error.code === 'VALIDATION_ERROR'
+  );
+});
+
+test('family initiated call validates voice/video mode and forwards it', async () => {
+  let captured = null;
+  const service = new FamilyLinkService({
+    async startVideoCall(request) { captured = request; return { state: 'notifying_device', ...request }; }
+  });
+  const result = await service.startVideoCall({ mode: 'voice' });
+  assert.deepEqual(captured, { mode: 'voice' });
+  assert.equal(result.state, 'notifying_device');
+  assert.deepEqual(validateVideoCallStart({ mode: 'video' }), { mode: 'video' });
+  assert.throws(() => validateVideoCallStart({ mode: 'text' }),
+    (error) => error.code === 'VALIDATION_ERROR');
 });

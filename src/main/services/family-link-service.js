@@ -5,6 +5,8 @@ const { FamilyLinkError } = require('../../shared/family-link-error');
 const REMINDER_TYPES = new Set(['medicine', 'water', 'other']);
 const REPEAT_RULES = new Set(['daily', 'weekdays', 'once']);
 const PET_STYLES = new Set(['温和陪伴', '活泼陪伴']);
+const VIDEO_CALL_ACTIONS = new Set(['accept', 'reject', 'hangup', 'fail']);
+const VIDEO_CALL_MODES = new Set(['voice', 'video']);
 
 function requireObject(value, fieldName) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -90,6 +92,33 @@ function validateReminderDraft(draft, updating = false) {
   return result;
 }
 
+function validateVideoCallAction(request) {
+  requireObject(request, '通话操作');
+  const callId = String(request.callId ?? '').trim();
+  if (!callId || callId.length > 80) {
+    throw new FamilyLinkError('VALIDATION_ERROR', '通话标识无效');
+  }
+  if (!VIDEO_CALL_ACTIONS.has(request.action)) {
+    throw new FamilyLinkError('VALIDATION_ERROR', '通话操作只支持接听、拒绝或挂断');
+  }
+  integerInRange(request.expectedRevision, 0, Number.MAX_SAFE_INTEGER, '通话版本');
+  return {
+    callId,
+    action: request.action,
+    expectedRevision: request.expectedRevision,
+    ...(request.errorCode ? { errorCode: String(request.errorCode).slice(0, 80) } : {}),
+    ...(request.errorMessage ? { errorMessage: String(request.errorMessage).slice(0, 300) } : {})
+  };
+}
+
+function validateVideoCallStart(request) {
+  requireObject(request, '呼叫请求');
+  if (!VIDEO_CALL_MODES.has(request.mode)) {
+    throw new FamilyLinkError('VALIDATION_ERROR', '通话模式只支持语音或视频');
+  }
+  return { mode: request.mode };
+}
+
 class FamilyLinkService {
   constructor(adapter) {
     if (!adapter) {
@@ -127,10 +156,24 @@ class FamilyLinkService {
     integerInRange(request.expectedRevision, 0, Number.MAX_SAFE_INTEGER, '提醒版本');
     return this.adapter.deleteReminder(request.id, request.expectedRevision);
   }
+
+  async getVideoCall() {
+    return this.adapter.getVideoCall();
+  }
+
+  async startVideoCall(request) {
+    return this.adapter.startVideoCall(validateVideoCallStart(request));
+  }
+
+  async applyVideoCallAction(request) {
+    return this.adapter.applyVideoCallAction(validateVideoCallAction(request));
+  }
 }
 
 module.exports = {
   FamilyLinkService,
   validateReminderDraft,
-  validateSettingsPatch
+  validateSettingsPatch,
+  validateVideoCallAction,
+  validateVideoCallStart
 };

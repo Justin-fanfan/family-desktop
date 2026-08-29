@@ -223,6 +223,68 @@ select, input[type="text"], input[type="url"], input[type="password"], input[typ
 .edit-reminder { border: 0; color: var(--primary); background: transparent; font-weight: 700; }
 .empty-state { display: grid; min-height: 280px; place-items: center; color: var(--muted); }
 
+.call-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; }
+.call-stage { position: relative; min-height: 520px; padding: 0; overflow: hidden; background: #1f302b; }
+.call-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 13px;
+  border: 1px solid rgba(216,240,232,.14);
+  border-radius: 16px;
+  color: #f3faf7;
+  background: radial-gradient(circle at 50% 35%, #36564d, #1b2a26 68%);
+  text-align: center;
+}
+.call-stage.video-active .call-placeholder {
+  inset: 18px auto auto 18px;
+  width: min(360px, calc(100% - 36px));
+  min-height: 0;
+  padding: 16px 20px;
+  gap: 5px;
+  place-items: start;
+  border-radius: 16px;
+  background: rgba(15, 38, 31, .78);
+  text-align: left;
+}
+.call-stage.video-active .call-symbol { display: none; }
+.call-remote-video { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; background: #10201b; }
+.call-local-video {
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  right: 18px;
+  width: 220px;
+  height: 150px;
+  border: 3px solid #fff;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #10201b;
+  box-shadow: 0 12px 30px rgba(0,0,0,.28);
+}
+.call-duration { font-size: 20px; font-weight: 800; color: #fff; }
+.call-placeholder strong { font-size: 25px; }
+.call-placeholder p { margin: 0; color: #bad0c9; }
+.call-placeholder small { color: #829d94; }
+.call-symbol {
+  display: grid;
+  width: 92px;
+  height: 92px;
+  place-items: center;
+  border-radius: 32px;
+  color: #173b31;
+  background: #b4e6d6;
+  font-size: 25px;
+  font-weight: 800;
+}
+.call-controls { align-self: stretch; }
+.call-controls h2 { margin: 8px 0 10px; }
+.call-controls > p { min-height: 48px; margin: 0; color: var(--muted); line-height: 1.6; }
+.call-actions { display: grid; gap: 10px; margin-top: 30px; }
+
 dialog { width: min(620px, calc(100vw - 48px)); padding: 0; border: 0; border-radius: 20px; color: var(--ink); box-shadow: 0 30px 90px rgba(20,40,34,.24); }
 dialog::backdrop { background: rgba(21,42,36,.48); backdrop-filter: blur(3px); }
 .dialog-card { padding: 27px; }
@@ -262,4 +324,5 @@ dialog::backdrop { background: rgba(21,42,36,.48); backdrop-filter: blur(3px); }
   main { padding-right: 28px; padding-left: 28px; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
   .content-grid { grid-template-columns: 1fr; }
+  .call-layout { grid-template-columns: 1fr; }
 }
