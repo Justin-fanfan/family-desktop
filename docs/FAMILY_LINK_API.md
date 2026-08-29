@@ -28,11 +28,11 @@ Renderer UI
 - 默认局域网地址：`http://<device-ip>:8787`；
 - API 前缀：`/api/v1`；
 - 请求和响应编码：UTF-8 JSON；
-- 时间戳：带时区的 ISO 8601，例如 `2026-08-29T08:30:00+08:00`；
+- 时间戳：UTC ISO 8601，例如 `2026-08-29T00:30:00Z`；
 - 日期：`YYYY-MM-DD`；
 - 时间：24 小时制 `HH:mm`；
 - 客户端标识：`X-LongPet-Client: family-desktop/0.1`；
-- 鉴权：设置 `LONGPET_FAMILY_LINK_TOKEN` 后使用 `Authorization: Bearer <pairing-token>`；当前比赛局域网只读阶段允许暂不配置令牌；
+- 鉴权：非回环监听必须设置 `LONGPET_FAMILY_LINK_TOKEN`，客户端使用 `Authorization: Bearer <pairing-token>`；
 - 密码、配对码和令牌不得出现在 URL、日志或错误详情中。
 
 比赛局域网阶段可以使用 HTTP，但服务只能监听受信任局域网接口。离开受控网络后必须升级为 HTTPS/WSS，并通过中转服务连接，禁止直接把开发板端口映射到公网。
@@ -57,11 +57,13 @@ Renderer UI
 
 | HTTP | code | 含义 |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | 字段格式或范围错误 |
+| 400 | `BAD_REQUEST` | HTTP 或 JSON 请求结构无效 |
 | 401 | `AUTHENTICATION_REQUIRED` | 未提供或令牌无效 |
 | 403 | `PERMISSION_DENIED` | 已鉴权但无操作权限 |
 | 404 | `REMINDER_NOT_FOUND` | 提醒不存在 |
 | 409 | `REVISION_CONFLICT` | 乐观锁版本冲突 |
+| 413/431 | `REQUEST_TOO_LARGE` | 正文或请求头超过限制 |
+| 422 | `VALIDATION_ERROR` | 字段格式、枚举或范围错误 |
 | 429 | `RATE_LIMITED` | 请求过于频繁 |
 | 500 | `INTERNAL_ERROR` | 未分类板端错误 |
 | 503 | `CAPABILITY_UNAVAILABLE` | 硬件或平台能力当前不可用 |
@@ -81,23 +83,23 @@ Renderer UI
   "apiVersion": "1.0",
   "capabilities": {
     "settingsRead": true,
-    "settingsWrite": false,
+    "settingsWrite": true,
     "remindersRead": true,
-    "remindersWrite": false
+    "remindersWrite": true
   },
   "device": {
     "id": "longpet-ls-gd-001",
     "name": "客厅 LongPet",
     "softwareVersion": "0.2.0",
     "online": true,
-    "lastSeenAt": "2026-08-29T00:30:10+08:00",
+    "lastSeenAt": "2026-08-29T00:30:10Z",
     "networkSummary": "Wi-Fi 已连接",
     "powerSummary": "外接电源",
     "audioSummary": "USB PnP Sound Device / Speaker",
     "brightnessSummary": "未检测到可调背光"
   },
   "system": {
-    "currentDateTime": "2026-08-29T00:30:10+08:00",
+    "currentDateTime": "2026-08-29T00:30:10Z",
     "weatherSummary": "--",
     "networkKnown": true,
     "networkAvailable": true,
@@ -110,7 +112,7 @@ Renderer UI
     "medicineTotal": 2,
     "activityMinutes": 12,
     "interactionCount": 4,
-    "lastUpdated": "2026-08-29T00:28:00+08:00"
+    "lastUpdated": "2026-08-29T00:28:00Z"
   }
 }
 ```
@@ -135,8 +137,7 @@ Renderer UI
   "brightness": 72,
   "petStyle": "温和陪伴",
   "revision": 7,
-  "remoteWritable": false,
-  "updatedAt": "2026-08-29T00:30:00+08:00",
+  "remoteWritable": true,
   "capabilities": {
     "volume": {
       "available": true,
@@ -170,20 +171,9 @@ Renderer UI
 - `expectedRevision`：非负整数；不匹配时返回 HTTP 409；
 - 至少包含一个可修改字段；
 - 板端先由 `SettingsService` 持久化期望值，再通过既有 `settingApplyRequested` 应用硬件；
-- 若数据库成功但硬件应用失败，响应必须明确区分“已保存”和“已应用”，不能伪报成功。
+- 对应硬件能力不可用时，板端在持久化前返回 HTTP 503 `CAPABILITY_UNAVAILABLE`；不会只保存而伪报已经应用。
 
-建议成功响应继续返回完整设置对象，并可增加：
-
-```json
-{
-  "applyResults": {
-    "volume": { "applied": true, "message": "" },
-    "brightness": { "applied": false, "message": "设备不支持亮度调节" }
-  }
-}
-```
-
-当前桌面客户端会读取完整设置响应；附加 `applyResults` 不会破坏兼容性。
+成功响应返回完整设置对象和更新后的 revision；`capabilities` 是硬件应用后的最新 Adapter 状态。
 
 ## 6. 提醒接口
 
@@ -219,11 +209,11 @@ Renderer UI
       "enabled": true,
       "revision": 3,
       "status": "pending",
-      "createdAt": "2026-08-20T10:00:00+08:00",
-      "updatedAt": "2026-08-28T22:00:00+08:00"
+      "createdAt": "2026-08-20T10:00:00Z",
+      "updatedAt": "2026-08-28T22:00:00Z"
     }
   ],
-  "remoteWritable": false
+  "remoteWritable": true
 }
 ```
 
@@ -277,9 +267,7 @@ Renderer UI
 
 ## 7. 配对与鉴权建议
 
-当前板端首个真实连接版本只开放三个 GET 接口。任何已知资源的非 GET 请求返回 HTTP 405 和 `READ_ONLY_API`；家属端必须依据状态接口的能力字段禁用远程写入入口。
-
-当前客户端已经支持 Bearer Token，但板端签发流程尚未实现。建议下一步：
+当前板端已经要求 Bearer Token 并开放设置和提醒写入；家属端仍必须依据状态接口的能力字段决定是否启用每类写操作。Token 目前由运维配置，板端签发流程尚未实现。建议下一步：
 
 1. LongPet 设置页显示一次性六位配对码或二维码；
 2. 家属端提交设备 ID 与一次性码；

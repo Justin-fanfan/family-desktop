@@ -10,7 +10,7 @@
 
 ## 1. 本轮范围
 
-报告覆盖家属端 MVP 以及随后完成的开发板只读真实连接：
+报告覆盖家属端 MVP、开发板真实连接以及设置/提醒写入：
 
 1. 远程查看设备、网络、供电、音频、关怀与提醒摘要；
 2. 远程修改音量、亮度和宠物风格；
@@ -20,7 +20,7 @@
 6. 建立参数校验、错误模型与乐观锁冲突处理；
 7. 完成 Node 自动测试与 Windows Release 打包入口。
 
-开发板现已提供 FamilyLink 只读 HTTP 服务。家属端能够真实读取状态、设置与提醒，并依据能力字段禁用尚未开放的远程写入。应用不会使用 SSH 或直接访问板端数据库来伪造接通状态。
+开发板现已提供带 Bearer Token 的 FamilyLink HTTP 读写服务。家属端能够真实读取状态和能力，并经板端 Service 修改设置与提醒。应用不会使用 SSH 或直接访问板端数据库来伪造接通状态。
 
 ## 2. 现有 LongPet 模型映射
 
@@ -77,7 +77,7 @@ Settings form
 ```
 
 不支持的亮度能力会在 UI 禁用，客户端不会发送 brightness 字段。
-当前真实板端还会报告 `settingsWrite=false`，因此整个设置表单和保存按钮均禁用；演示模式仍可验证完整写入交互。
+真实板端报告 `settingsWrite=true`；可用字段启用，不可用的亮度能力继续单独禁用。保存时携带最近读取的 revision，冲突后自动刷新。
 
 ### 3.3 编辑提醒
 
@@ -138,7 +138,7 @@ npm test
 - HTTP 409 结构化错误映射；
 - URL 协议和凭据安全校验。
 
-最终验证结果：`npm run check` 通过，`npm test` 共执行 11 项测试，11 项全部通过、0 项失败。
+最终验证结果：`npm run check` 通过，`npm test` 共执行 12 项测试，12 项全部通过、0 项失败。
 
 ## 7. 界面与打包产物冒烟测试
 
@@ -155,8 +155,8 @@ npm test
 | 页面 | 结果 | 截图 |
 |---|---|---|
 | 真实设备状态 | 通过 | [real-dashboard.png](screenshots/real-dashboard.png) |
-| 真实只读设置 | 通过 | [real-settings.png](screenshots/real-settings.png) |
-| 真实只读提醒 | 通过 | [real-reminders.png](screenshots/real-reminders.png) |
+| 真实设置页（只读基线历史截图） | 通过 | [real-settings.png](screenshots/real-settings.png) |
+| 真实提醒页（只读基线历史截图） | 通过 | [real-reminders.png](screenshots/real-reminders.png) |
 
 此外，最终打包后的 `LongPet Family.exe` 已连接真实设备，状态页正确渲染并以退出码 0 结束；截图见 [real-packaged-dashboard.png](screenshots/real-packaged-dashboard.png)。
 
@@ -186,28 +186,33 @@ release/win-unpacked/LongPet Family.exe
 | 端口 | 结果 | 含义 |
 |---|---|---|
 | `22/tcp` | 可连接 | 开发板在线，SSH 服务可达 |
-| `8787/tcp` | 可连接 | LongPet 进程正在提供 FamilyLink 只读 API |
+| `8787/tcp` | 可连接 | LongPet 进程正在提供带 Token 的 FamilyLink API |
 
-真实联调读取到设备 `longpet-ls-gd`、网络在线、设置、4 条提醒和今日关怀数据。所有时间带 UTC `Z`，家属端按 Windows 本地时区显示；对设置的 PATCH 请求返回 HTTP 405 `READ_ONLY_API`。
+最终部署后只读检查确认设备 `longpet-ls-gd` 在线，`settingsWrite=true`、`remindersWrite=true`，USB 声卡和网络状态正常。按用户要求，最终版的设置与提醒写操作由用户手工测试，Codex 不再写入设备数据。
 
-## 10. 已知限制
+## 10. 用户手工验收
 
-1. 板端当前只实现三个 GET，远程设置与提醒写入尚未开放；
-2. 当前使用手动刷新，没有 WebSocket 推送；
-3. 配对令牌签发、撤销与权限模型尚未实现；
-4. 未做公网中转，不能跨家庭网络使用；
-5. 未做安装器与自动更新，只生成 Windows unpacked Release；
-6. 当前仅支持简体中文和 Windows 首轮验证；
-7. 亮度能力不可用时仅展示板端事实，不伪造调节结果；
-8. 当前板端未配置 Bearer Token，只适用于受控比赛局域网，不得映射到公网；
-9. 本次联调时 USB 声卡未被内核枚举，音频摘要显示真实不可用状态，该现象早于 FamilyLink 部署。
+1. 运行 `release\win-unpacked\LongPet Family.exe`；
+2. 点击“切换连接”，选择局域网设备；
+3. 地址填写 `http://10.188.219.51:8787`，输入当前 FamilyLink Token；
+4. 连接后确认设备名称、网络、USB 音频、设置和提醒都来自真实板端；
+5. 在远程设置页小幅修改音量或切换宠物风格，保存后版本号应增加；
+6. 本板亮度能力不可用，滑块应禁用，不能伪报保存成功；
+7. 新增一条未来时间的测试提醒，再编辑标题或时间，最后删除；
+8. 每一步都检查板端页面是否同步，并在测试结束后确认没有残留测试提醒。
 
-## 11. 下一步最小功能建议
+发生 `REVISION_CONFLICT` 时客户端会刷新数据并提示重新保存，这是并发保护，不是连接失败。
 
-下一轮实现“远程设置写入”一个最小闭环：
+## 11. 已知限制
 
-```text
-PATCH /api/v1/settings
-```
+1. 当前使用手动刷新，没有 WebSocket 推送；
+2. 配对令牌签发、撤销与权限模型尚未实现；
+3. 未做公网中转，不能跨家庭网络使用；
+4. 未做安装器与自动更新，只生成 Windows unpacked Release；
+5. 当前仅支持简体中文和 Windows 首轮验证；
+6. 本板背光能力不可用，亮度字段被禁用并由板端拒绝远程写入；
+7. Token 目前由 systemd 运维配置，只适用于受控局域网，不得映射到公网。
 
-先为设置增加持久化 revision，再通过 `FamilyLinkController -> SettingsService` 完成版本校验、保存和硬件应用结果回传。完成 Release、CTest 和板端验证后，再单独增加提醒写入接口。
+## 12. 下一步最小功能建议
+
+下一轮最适合实现板端一次性配对码与 Token 签发/撤销，让家属端不再依赖手工读取 systemd Token。公网连接和事件推送仍应留到后续独立步骤。

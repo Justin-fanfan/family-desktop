@@ -68,6 +68,44 @@ test('HTTP adapter unwraps reminder collection', async () => {
   });
 });
 
+test('HTTP adapter maps reminder create, update and delete contracts', async () => {
+  const requests = [];
+  await withServer(async (request, response) => {
+    const body = await readJson(request);
+    requests.push({ method: request.method, url: request.url, body });
+    response.writeHead(request.method === 'POST' ? 201 : 200,
+      { 'Content-Type': 'application/json' });
+    if (request.method === 'POST') {
+      response.end(JSON.stringify({ id: 12, ...body, revision: 1 }));
+    } else if (request.method === 'PUT') {
+      response.end(JSON.stringify({ id: 12, ...body, revision: 2 }));
+    } else {
+      response.end(JSON.stringify({ deleted: true, id: 12 }));
+    }
+  }, async (baseUrl) => {
+    const adapter = new HttpFamilyLinkAdapter({ baseUrl, token: 'pairing-token' });
+    const draft = {
+      type: 'water', title: '下午喝水', timeOfDay: '15:00',
+      scheduledDate: '2026-08-29', repeatRule: 'daily', enabled: true
+    };
+    const created = await adapter.createReminder(draft);
+    const updated = await adapter.updateReminder(created.id, {
+      ...draft, title: '下午补水', expectedRevision: created.revision
+    });
+    const deleted = await adapter.deleteReminder(updated.id, updated.revision);
+    assert.equal(deleted.deleted, true);
+  });
+
+  assert.deepEqual(requests.map(({ method, url }) => ({ method, url })), [
+    { method: 'POST', url: '/api/v1/reminders' },
+    { method: 'PUT', url: '/api/v1/reminders/12' },
+    { method: 'DELETE', url: '/api/v1/reminders/12?expectedRevision=2' }
+  ]);
+  assert.equal(requests[0].body.title, '下午喝水');
+  assert.equal(requests[1].body.expectedRevision, 1);
+  assert.equal(requests[2].body, null);
+});
+
 test('HTTP adapter preserves structured device conflicts', async () => {
   await withServer((_request, response) => {
     response.writeHead(409, { 'Content-Type': 'application/json' });
