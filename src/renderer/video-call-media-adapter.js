@@ -373,3 +373,10 @@
     })
   });
 })();
+// --- CJS 导出 shim（为 Vite/React 构建提供直接 import；行为不变，Node 测试仍通过 require 读取 window 全局） ---
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    VideoCallMediaAdapter: window.LongPetVideoCallMediaAdapter,
+    LongPetMediaProtocol: window.LongPetMediaProtocol
+  };
+}

@@ -5,3 +5,11 @@ coverage/
 .env
 .DS_Store
 Thumbs.db
+dist/
+.npm-cache-ws/
+.electron-cache/
+.electron-builder-cache/
+.tmp/
+.npm-tmp-out.txt
+.detached-test.txt
+.node-portable/
