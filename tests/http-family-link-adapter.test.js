@@ -160,3 +160,22 @@ test('HTTP adapter maps video call state and action endpoints', async () => {
     }
   ]);
 });
+
+test('HTTP adapter creates an authenticated AI view session', async () => {
+  await withServer(async (request, response) => {
+    assert.equal(request.method, 'POST');
+    assert.equal(request.url, '/api/v1/vision-monitor/sessions');
+    assert.equal(request.headers.authorization, 'Bearer pairing-token');
+    assert.equal(await readJson(request), null);
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({
+      sessionId: 'view-1', sessionToken: 'ephemeral', port: 8789,
+      protocolVersion: 1, frameRate: 7
+    }));
+  }, async (baseUrl) => {
+    const adapter = new HttpFamilyLinkAdapter({ baseUrl, token: 'pairing-token' });
+    const session = await adapter.createVisionMonitorSession();
+    assert.equal(session.port, 8789);
+    assert.equal(session.sessionToken, 'ephemeral');
+  });
+});

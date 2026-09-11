@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { view: 'dashboard', label: '设备状态', icon: <IconHome size="large" /> },
   { view: 'settings', label: '远程设置', icon: <IconSetting size="large" /> },
   { view: 'reminders', label: '提醒管理', icon: <IconBell size="large" /> },
+  { view: 'ai-view', label: 'AI 视野', icon: <span aria-hidden="true">◎</span> },
   { view: 'video-call', label: '语音 / 视频通话', icon: <IconVideo size="large" /> }
 ];
 

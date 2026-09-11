@@ -168,6 +168,10 @@ class FamilyLinkService {
   async applyVideoCallAction(request) {
     return this.adapter.applyVideoCallAction(validateVideoCallAction(request));
   }
+
+  async createVisionMonitorSession() {
+    return this.adapter.createVisionMonitorSession();
+  }
 }
 
 module.exports = {

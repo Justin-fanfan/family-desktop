@@ -22,8 +22,8 @@ test('binary media frame preserves versioned header and payload', () => {
 
 test('media URL derives host from configured FamilyLink URL and only replaces port', () => {
   assert.equal(
-    deriveMediaUrl('http://10.240.178.51:8787', { mediaPort: 8788 }),
-    'ws://10.240.178.51:8788/media/v1'
+    deriveMediaUrl('http://192.168.137.32:8787', { mediaPort: 8788 }),
+    'ws://192.168.137.32:8788/media/v1'
   );
   assert.equal(
     deriveMediaUrl('https://longpet.lan/api', { mediaPort: 9443 }),

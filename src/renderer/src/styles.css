@@ -179,6 +179,49 @@ main { flex: 1; overflow-y: auto; padding: 26px 30px; min-width: 0; }
 .call-actions .semi-button { width: 100%; height: 46px; font-size: 1rem; border-radius: 12px; }
 .hidden { display: none !important; }
 
+/* ---- AI 视野 ---- */
+.vision-monitor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; }
+.vision-monitor-stage {
+  position: relative; min-height: 500px; padding: 0; overflow: hidden;
+  background: #151515; display: flex; align-items: center; justify-content: center;
+}
+#vision-monitor-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.vision-monitor-placeholder {
+  position: relative; z-index: 2; max-width: 420px; padding: 14px 20px;
+  border-radius: 12px; color: #eee; background: rgba(20, 20, 20, 0.72);
+  text-align: center;
+}
+.vision-monitor-live-badge {
+  position: absolute; z-index: 3; left: 16px; top: 16px; display: flex;
+  align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px;
+  color: #fff; background: rgba(16, 20, 18, 0.72); font-size: 0.8rem;
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.vision-monitor-live-badge span { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
+.vision-monitor-live-badge.is-live span { background: #ff625f; }
+.vision-monitor-info { display: flex; flex-direction: column; min-width: 0; }
+.vision-monitor-info h2 { margin: 2px 0 6px; font-size: 1.35rem; }
+.vision-monitor-status { margin: 0 0 16px; min-height: 40px; color: var(--lp-text-secondary); font-size: 0.9rem; }
+.vision-monitor-summary {
+  display: flex; align-items: center; gap: 12px; padding: 14px;
+  border-radius: 12px; background: var(--lp-surface-soft); margin-bottom: 14px;
+}
+.vision-state-dot { width: 13px; height: 13px; flex: none; border-radius: 50%; background: #aaa; }
+.vision-state-dot.tracking { background: #2ebd85; box-shadow: 0 0 0 5px rgba(46, 189, 133, 0.14); }
+.vision-monitor-summary strong, .vision-monitor-summary small { display: block; }
+.vision-monitor-summary small { margin-top: 3px; color: var(--lp-text-secondary); }
+.vision-debug-switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px 0; border-top: 1px solid var(--lp-border); border-bottom: 1px solid var(--lp-border);
+}
+.vision-debug-switch strong, .vision-debug-switch small { display: block; }
+.vision-debug-switch small { color: var(--lp-text-secondary); margin-top: 2px; }
+.vision-debug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 12px; margin: 14px 0 0; }
+.vision-debug-grid div { min-width: 0; padding: 9px; border-radius: 9px; background: var(--lp-surface-soft); }
+.vision-debug-grid dt { color: var(--lp-text-secondary); font-size: 0.75rem; }
+.vision-debug-grid dd { margin: 3px 0 0; font-size: 0.86rem; font-weight: 600; overflow-wrap: anywhere; }
+.vision-monitor-privacy { margin-top: auto; padding: 15px 0; color: var(--lp-text-secondary); font-size: 0.8rem; line-height: 1.5; }
+
 /* ---- 弹窗 ---- */
 .dialog-help { font-size: 0.85rem; color: var(--lp-text-secondary); margin: 2px 0 18px; }
 .field-hint { font-size: 0.8rem; color: var(--lp-text-secondary); margin-top: 2px; }
@@ -195,5 +238,6 @@ main { flex: 1; overflow-y: auto; padding: 26px 30px; min-width: 0; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
   .content-grid { grid-template-columns: 1fr; }
   .call-layout { grid-template-columns: 1fr; }
+  .vision-monitor-layout { grid-template-columns: 1fr; }
   .care-grid { grid-template-columns: repeat(2, 1fr); }
 }

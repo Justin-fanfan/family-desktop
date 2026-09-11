@@ -207,6 +207,14 @@ class MockFamilyLinkAdapter {
     return clone(this.videoCall);
   }
 
+  async createVisionMonitorSession() {
+    await this.wait();
+    throw new FamilyLinkError(
+      'VISION_MONITOR_UNAVAILABLE',
+      '演示模式不连接真实摄像头，请先连接 LongPet 设备'
+    );
+  }
+
   async startVideoCall(payload) {
     await this.wait();
     if (['outgoing_ringing', 'notifying_device', 'connecting_media', 'connected']

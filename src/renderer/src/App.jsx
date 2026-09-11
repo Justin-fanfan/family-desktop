@@ -6,6 +6,7 @@ import Topbar from './components/Topbar';
 import DashboardView from './views/DashboardView';
 import SettingsView from './views/SettingsView';
 import RemindersView from './views/RemindersView';
+import VisionMonitorView from './views/VisionMonitorView';
 import VideoCallView from './views/VideoCallView';
 import ConnectionDialog from './components/ConnectionDialog';
 import ReminderDialog from './components/ReminderDialog';
@@ -26,6 +27,7 @@ export default function App() {
         <DashboardView state={state} active={state.activeView === 'dashboard'} />
         <SettingsView state={state} active={state.activeView === 'settings'} />
         <RemindersView state={state} active={state.activeView === 'reminders'} />
+        <VisionMonitorView active={state.activeView === 'ai-view'} />
         <VideoCallView state={state} active={state.activeView === 'video-call'} />
       </main>
       <ConnectionDialog state={state} />

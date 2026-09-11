@@ -11,6 +11,7 @@ export const PAGE_TITLES = {
   dashboard: '设备状态',
   settings: '远程设置',
   reminders: '提醒管理',
+  'ai-view': 'LongPet AI 视野',
   'video-call': '语音 / 视频通话'
 };
 

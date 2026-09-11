@@ -5,7 +5,7 @@ export default function ConnectionDialog({ state }) {
   const { connection, connectionDialogOpen, setConnectionDialogOpen, configureConnection } = state;
 
   const [mock, setMock] = useState(true);
-  const [baseUrl, setBaseUrl] = useState('http://10.240.178.51:8787');
+  const [baseUrl, setBaseUrl] = useState('http://192.168.137.32:8787');
   const [token, setToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,7 +66,7 @@ export default function ConnectionDialog({ state }) {
           value={baseUrl}
           onChange={setBaseUrl}
           disabled={mock}
-          placeholder="http://10.240.178.51:8787"
+          placeholder="http://192.168.137.32:8787"
           size="large"
         />
 

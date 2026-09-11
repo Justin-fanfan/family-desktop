@@ -9,7 +9,7 @@ let mainWindow = null;
 const smokeCapturePath = process.env.LONGPET_FAMILY_SMOKE_CAPTURE?.trim() || '';
 const requestedSmokeView = process.env.LONGPET_FAMILY_SMOKE_VIEW?.trim() || 'dashboard';
 const smokeBaseUrl = process.env.LONGPET_FAMILY_SMOKE_BASE_URL?.trim() || '';
-const smokeView = new Set(['dashboard', 'settings', 'reminders', 'video-call']).has(requestedSmokeView)
+const smokeView = new Set(['dashboard', 'settings', 'reminders', 'ai-view', 'video-call']).has(requestedSmokeView)
   ? requestedSmokeView
   : 'dashboard';
 const ipcController = new IpcController({

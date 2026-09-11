@@ -16,7 +16,8 @@ const CHANNELS = [
   'family:reminders:delete',
   'family:video-call:get',
   'family:video-call:start',
-  'family:video-call:act'
+  'family:video-call:act',
+  'family:vision-monitor:start'
 ];
 
 function success(data) {
@@ -31,7 +32,7 @@ class IpcController {
   constructor(options = {}) {
     this.connection = {
       mode: 'mock',
-      baseUrl: 'http://10.240.178.51:8787',
+      baseUrl: 'mock://local',
       hasToken: false
     };
     this.service = new FamilyLinkService(new MockFamilyLinkAdapter());
@@ -82,6 +83,10 @@ class IpcController {
     this.handle('family:video-call:act', async (_event, request) =>
       this.service.applyVideoCallAction(request)
     );
+    this.handle('family:vision-monitor:start', async () => ({
+      ...(await this.service.createVisionMonitorSession()),
+      baseUrl: this.connection.baseUrl
+    }));
   }
 
   createConnection(request) {

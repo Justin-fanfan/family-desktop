@@ -118,3 +118,16 @@ test('family initiated call validates voice/video mode and forwards it', async (
   assert.throws(() => validateVideoCallStart({ mode: 'text' }),
     (error) => error.code === 'VALIDATION_ERROR');
 });
+
+test('AI view session is requested through the service boundary', async () => {
+  let calls = 0;
+  const service = new FamilyLinkService({
+    async createVisionMonitorSession() {
+      calls += 1;
+      return { sessionId: 'view-2', sessionToken: 'once', port: 8789 };
+    }
+  });
+  const session = await service.createVisionMonitorSession();
+  assert.equal(calls, 1);
+  assert.equal(session.sessionId, 'view-2');
+});
