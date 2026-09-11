@@ -87,16 +87,22 @@ function createWindow() {
         })`);
       }
       if (smokeView !== 'dashboard') {
-        const activeViewId = await mainWindow.webContents.executeJavaScript(
-          `(() => {
+        const navigationResult = await mainWindow.webContents.executeJavaScript(
+          `(async () => {
             const target = document.querySelector('[data-view="${smokeView}"]');
             if (!target) return 'missing-navigation-target';
             target.click();
+            const deadline = Date.now() + 2000;
+            while (Date.now() < deadline) {
+              const activeId = document.querySelector('.view.active')?.id;
+              if (activeId === 'view-${smokeView}') return activeId;
+              await new Promise((resolve) => setTimeout(resolve, 50));
+            }
             return document.querySelector('.view.active')?.id || 'missing-active-view';
           })()`
         );
-        if (activeViewId !== `view-${smokeView}`) {
-          throw new Error(`Smoke navigation failed: expected view-${smokeView}, got ${activeViewId}`);
+        if (navigationResult !== `view-${smokeView}`) {
+          throw new Error(`Smoke navigation failed: expected view-${smokeView}, got ${navigationResult}`);
         }
         mainWindow.webContents.invalidate();
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -110,7 +116,12 @@ function createWindow() {
       app.exit(1);
     }
   });
-  void mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  const devRendererUrl = process.env.ELECTRON_RENDERER_URL?.trim();
+  if (devRendererUrl) {
+    void mainWindow.loadURL(devRendererUrl);
+  } else {
+    void mainWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'renderer', 'index.html'));
+  }
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

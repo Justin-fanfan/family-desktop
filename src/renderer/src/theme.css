@@ -1,0 +1,122 @@
+/* ========== LongPet 家属端 · 设计令牌 ========== */
+:root,
+html[data-theme='light'] {
+  --lp-bg: #f6f3ee;
+  --lp-surface: #ffffff;
+  --lp-surface-soft: #fbf7f0;
+  --lp-text: #2f2a24;
+  --lp-text-secondary: #7d756a;
+  --lp-border: #eae3d7;
+  --lp-primary: #e0702f;
+  --lp-primary-hover: #cf5f26;
+  --lp-primary-soft: #fdeee2;
+  --lp-success: #2f9e5f;
+  --lp-success-soft: #e3f5ea;
+  --lp-danger: #cf3f3f;
+  --lp-danger-soft: #fdeaea;
+  --lp-warning: #d99a1b;
+  --lp-warning-soft: #fdf3dd;
+  --lp-fill: #f1ece2;
+  --lp-shadow: 0 6px 24px rgba(96, 74, 42, 0.08);
+  --lp-radius: 14px;
+  --lp-radius-lg: 18px;
+
+  /* Semi Design 主题覆盖（浅色） */
+  --semi-color-primary: var(--lp-primary);
+  --semi-color-primary-hover: #cf5f26;
+  --semi-color-primary-active: #bd5220;
+  --semi-color-primary-light-default: var(--lp-primary-soft);
+  --semi-color-primary-light-hover: #fbe3d2;
+  --semi-color-primary-light-active: #f7d4bb;
+  --semi-color-focus-border: #e8a06b;
+  --semi-color-link: #c8601f;
+  --semi-color-success: var(--lp-success);
+  --semi-color-danger: var(--lp-danger);
+  --semi-color-warning: var(--lp-warning);
+  --semi-color-text-0: var(--lp-text);
+  --semi-color-text-1: #403a33;
+  --semi-color-text-2: var(--lp-text-secondary);
+  --semi-color-text-3: #a39a8d;
+  --semi-color-bg-0: var(--lp-bg);
+  --semi-color-bg-1: var(--lp-surface);
+  --semi-color-bg-2: #f4efe6;
+  --semi-color-border: var(--lp-border);
+  --semi-color-fill-0: #f4efe6;
+  --semi-color-fill-1: #ede5d8;
+  --semi-color-fill-2: #e3d8c7;
+  --semi-color-tertiary-light-default: #f1ece2;
+  --semi-color-tertiary-light-hover: #eae2d4;
+  --semi-color-tertiary-light-active: #e3d8c7;
+  --semi-radius-base: 10px;
+  --semi-radius-small: 8px;
+  --semi-radius-medium: 12px;
+  --semi-radius-large: 16px;
+}
+
+/* 深色模式：自定令牌 + Semi 的 body.semi-dark 暗色变量由框架处理 */
+html[data-theme='dark'] {
+  --lp-bg: #211d19;
+  --lp-surface: #2b2622;
+  --lp-surface-soft: #342e27;
+  --lp-text: #f2ece2;
+  --lp-text-secondary: #b8ad9e;
+  --lp-border: #453d33;
+  --lp-primary: #f28a4b;
+  --lp-primary-hover: #f79b62;
+  --lp-primary-soft: #4a3525;
+  --lp-success: #4fbf7e;
+  --lp-success-soft: #243d2e;
+  --lp-danger: #e56666;
+  --lp-danger-soft: #462828;
+  --lp-warning: #e3b04a;
+  --lp-warning-soft: #40371f;
+  --lp-fill: #3a332b;
+  --lp-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+
+  --semi-color-primary: var(--lp-primary);
+  --semi-color-primary-hover: #f79b62;
+  --semi-color-primary-active: #e97d3e;
+  --semi-color-primary-light-default: var(--lp-primary-soft);
+  --semi-color-text-0: var(--lp-text);
+  --semi-color-text-1: #e6ddcf;
+  --semi-color-text-2: var(--lp-text-secondary);
+  --semi-color-bg-0: var(--lp-bg);
+  --semi-color-bg-1: var(--lp-surface);
+  --semi-color-bg-2: #38312a;
+  --semi-color-border: var(--lp-border);
+  --semi-color-fill-0: #3a332b;
+  --semi-color-fill-1: #463d33;
+  --semi-color-fill-2: #544a3e;
+}
+
+/* ========== 字号三档（html rem 基准 + Semi 字号变量） ========== */
+html { font-size: 16px; }
+html[data-font='large'] { font-size: 18px; }
+html[data-font='xlarge'] { font-size: 20px; }
+
+html[data-font='large'] {
+  --semi-font-size-extra-small: 14px;
+  --semi-font-size-small: 16px;
+  --semi-font-size-regular: 17px;
+  --semi-font-size-large: 19px;
+  --semi-font-size-extra-large: 22px;
+  --semi-font-size-header-6: 18px;
+  --semi-font-size-header-5: 21px;
+  --semi-font-size-header-4: 24px;
+  --semi-font-size-header-3: 27px;
+  --semi-font-size-header-2: 29px;
+  --semi-font-size-header-1: 32px;
+}
+html[data-font='xlarge'] {
+  --semi-font-size-extra-small: 15px;
+  --semi-font-size-small: 17px;
+  --semi-font-size-regular: 19px;
+  --semi-font-size-large: 21px;
+  --semi-font-size-extra-large: 24px;
+  --semi-font-size-header-6: 20px;
+  --semi-font-size-header-5: 23px;
+  --semi-font-size-header-4: 26px;
+  --semi-font-size-header-3: 29px;
+  --semi-font-size-header-2: 31px;
+  --semi-font-size-header-1: 34px;
+}

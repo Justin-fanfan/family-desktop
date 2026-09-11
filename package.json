@@ -1,20 +1,31 @@
 {
   "name": "longpet-family-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "LongPet 家属端桌面应用",
+  "description": "LongPet 家属端桌面应用（Vite + React + Semi Design）",
   "author": "LongPet Team",
   "main": "src/main/index.js",
   "scripts": {
-    "start": "electron .",
+    "dev": "node scripts/dev.js",
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "start:prod": "electron .",
     "test": "node --test",
-    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/video-call-media-adapter.js && node --check src/renderer/app.js && node --check scripts/real-device-write-smoke.js",
+    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/video-call-media-adapter.js && node --check scripts/real-device-write-smoke.js && node --check scripts/dev.js && vite build",
     "smoke:real-write": "node scripts/real-device-write-smoke.js",
-    "build:release": "electron-builder --win dir"
+    "build:release": "npm run build && electron-builder --win dir"
+  },
+  "dependencies": {
+    "@douyinfe/semi-icons": "^2.102.0",
+    "@douyinfe/semi-ui": "^2.102.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
     "electron": "44.0.0",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "vite": "^8.2.2"
   },
   "build": {
     "appId": "cn.longpet.family.desktop",
@@ -24,7 +35,11 @@
       "output": "release"
     },
     "files": [
-      "src/**/*",
+      "!node_modules/**/*",
+      "src/main/**/*",
+      "src/preload/**/*",
+      "src/shared/**/*",
+      "dist/**/*",
       "package.json"
     ],
     "win": {
