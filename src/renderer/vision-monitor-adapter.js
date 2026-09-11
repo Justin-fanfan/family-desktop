@@ -4,7 +4,10 @@
   const protocol = window.LongPetMediaProtocol;
   if (!protocol) throw new Error('LongPet media protocol must load before Vision Monitor');
 
-  const { encodeFrame, decodeFrame, STREAM } = protocol;
+  const {
+    encodeFrame, decodeFrame, normalizeCameraRotation,
+    orientedImageSize, drawImageWithRotation, STREAM
+  } = protocol;
   const VISION_PROTOCOL_VERSION = 1;
   const MAX_TARGET_AGE_MS = 1000;
 
@@ -87,6 +90,7 @@
       this.generation = 0;
       this.drawTimer = null;
       this.resizeObserver = null;
+      this.cameraRotation = 0;
     }
 
     async connect(baseUrl, session) {
@@ -148,6 +152,7 @@
         const control = JSON.parse(new TextDecoder().decode(frame.payload));
         if (control.type === 'stream_started') {
           this.authenticated = true;
+          this.cameraRotation = normalizeCameraRotation(control.camera_rotation);
           this.onStatus(`实时画面已连接 · 目标 ${control.frame_rate || this.session?.frameRate || 7} FPS`);
         } else if (control.type === 'vision_target') {
           this.target = parseVisionMetadata(control);
@@ -216,12 +221,15 @@
       context.fillRect(0, 0, width, height);
       if (!this.bitmap) return;
 
-      const scale = Math.min(width / this.bitmap.width, height / this.bitmap.height);
-      const drawWidth = this.bitmap.width * scale;
-      const drawHeight = this.bitmap.height * scale;
+      const oriented = orientedImageSize(
+        this.bitmap.width, this.bitmap.height, this.cameraRotation);
+      const scale = Math.min(width / oriented.width, height / oriented.height);
+      const drawWidth = oriented.width * scale;
+      const drawHeight = oriented.height * scale;
       const offsetX = (width - drawWidth) / 2;
       const offsetY = (height - drawHeight) / 2;
-      context.drawImage(this.bitmap, offsetX, offsetY, drawWidth, drawHeight);
+      drawImageWithRotation(context, this.bitmap, offsetX, offsetY,
+        drawWidth, drawHeight, this.cameraRotation);
 
       if (!shouldDisplayTarget(this.target)) return;
       const { x, y, w, h } = this.target.bbox;
@@ -279,6 +287,7 @@
       this.sequence = 0;
       this.frameRate = 0;
       this.previousFrameAt = 0;
+      this.cameraRotation = 0;
       this.draw();
     }
   }

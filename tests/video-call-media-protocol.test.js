@@ -5,7 +5,10 @@ const test = require('node:test');
 
 global.window = {};
 require('../src/renderer/video-call-media-adapter.js');
-const { encodeFrame, decodeFrame, deriveMediaUrl, STREAM, VIDEO_SETTINGS } =
+const {
+  encodeFrame, decodeFrame, deriveMediaUrl, normalizeCameraRotation,
+  orientedImageSize, STREAM, VIDEO_SETTINGS
+} =
   global.window.LongPetMediaProtocol;
 
 test('binary media frame preserves versioned header and payload', () => {
@@ -37,4 +40,12 @@ test('family video sent to LongPet uses the low-CPU profile', () => {
     familyVideoHeight: 360,
     familyVideoIntervalMs: 125
   });
+});
+
+test('camera rotation accepts quarter turns and swaps oriented dimensions', () => {
+  assert.equal(normalizeCameraRotation(180), 180);
+  assert.equal(normalizeCameraRotation('270'), 270);
+  assert.equal(normalizeCameraRotation(45), 0);
+  assert.deepEqual(orientedImageSize(640, 480, 180), { width: 640, height: 480 });
+  assert.deepEqual(orientedImageSize(640, 480, 90), { width: 480, height: 640 });
 });

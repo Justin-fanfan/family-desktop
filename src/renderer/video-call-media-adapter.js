@@ -10,6 +10,36 @@
   const FAMILY_VIDEO_HEIGHT = 360;
   const FAMILY_VIDEO_INTERVAL_MS = 125;
 
+  function normalizeCameraRotation(value) {
+    const degrees = Number(value);
+    return [0, 90, 180, 270].includes(degrees) ? degrees : 0;
+  }
+
+  function orientedImageSize(width, height, rotationDegrees) {
+    const rotation = normalizeCameraRotation(rotationDegrees);
+    return rotation === 90 || rotation === 270
+      ? { width: height, height: width }
+      : { width, height };
+  }
+
+  function drawImageWithRotation(context, image, x, y, width, height,
+    rotationDegrees) {
+    const rotation = normalizeCameraRotation(rotationDegrees);
+    if (rotation === 0) {
+      context.drawImage(image, x, y, width, height);
+      return;
+    }
+    const swapsAxes = rotation === 90 || rotation === 270;
+    const sourceWidth = swapsAxes ? height : width;
+    const sourceHeight = swapsAxes ? width : height;
+    context.save();
+    context.translate(x + width / 2, y + height / 2);
+    context.rotate(rotation * Math.PI / 180);
+    context.drawImage(image, -sourceWidth / 2, -sourceHeight / 2,
+      sourceWidth, sourceHeight);
+    context.restore();
+  }
+
   function deriveMediaUrl(baseUrl, call) {
     const url = new URL(baseUrl);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -85,6 +115,7 @@
       this.failureReported = false;
       this.authenticated = false;
       this.mediaActive = false;
+      this.cameraRotation = 0;
     }
 
     async connect(baseUrl, call) {
@@ -243,6 +274,8 @@
           const control = JSON.parse(new TextDecoder().decode(frame.payload));
           if (control.type === 'authenticated') {
             this.authenticated = true;
+            this.cameraRotation = normalizeCameraRotation(
+              control.cameraRotation ?? control.camera_rotation);
             this.onStatus(this.call?.state === 'notifying_device'
               ? '正在通知设备' : '媒体鉴权成功，正在打开音频');
           } else if (control.type === 'media_active') {
@@ -276,11 +309,16 @@
           canvas.height = height;
         }
         const context = canvas.getContext('2d', { alpha: false });
-        const scale = Math.max(width / bitmap.width, height / bitmap.height);
-        const drawWidth = bitmap.width * scale;
-        const drawHeight = bitmap.height * scale;
-        context.drawImage(bitmap, (width - drawWidth) / 2, (height - drawHeight) / 2,
-          drawWidth, drawHeight);
+        const oriented = orientedImageSize(
+          bitmap.width, bitmap.height, this.cameraRotation);
+        const scale = Math.max(width / oriented.width, height / oriented.height);
+        const drawWidth = oriented.width * scale;
+        const drawHeight = oriented.height * scale;
+        context.fillStyle = '#151515';
+        context.fillRect(0, 0, width, height);
+        drawImageWithRotation(context, bitmap,
+          (width - drawWidth) / 2, (height - drawHeight) / 2,
+          drawWidth, drawHeight, this.cameraRotation);
         bitmap.close();
       } finally {
         this.remoteDecodeBusy = false;
@@ -355,6 +393,7 @@
       this.remoteDecodeBusy = false;
       this.authenticated = false;
       this.mediaActive = false;
+      this.cameraRotation = 0;
       this.call = null;
       this.sequences.fill(0);
     }
@@ -365,6 +404,9 @@
     encodeFrame,
     decodeFrame,
     deriveMediaUrl,
+    normalizeCameraRotation,
+    orientedImageSize,
+    drawImageWithRotation,
     STREAM,
     VIDEO_SETTINGS: Object.freeze({
       familyVideoWidth: FAMILY_VIDEO_WIDTH,

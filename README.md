@@ -11,6 +11,8 @@ LongPet 家属端桌面应用。它提供设备状态查看、远程设置和提
 - 演示模式已经形成完整可操作闭环：查看状态、保存设置、创建/编辑/删除提醒；
 - 正式 HTTP 客户端及接口校验已经实现；
 - 板端已实现带 Token 的 `FamilyLink` 读写闭环，可真实读取状态并远程修改设置、创建/编辑/删除提醒；
+- “AI 视野”通过短时会话令牌接收板端 JPEG 与人物跟踪元数据，并在 Canvas 上绘制人物框；
+- 视频通话和 AI 视野会读取板端发送的摄像头旋转角度，仅校正 LongPet 摄像头画面；
 - 配对令牌仅保存在 Electron 主进程内存中，关闭应用后清除。
 
 ![真实开发板设备状态](docs/screenshots/real-dashboard.png)
@@ -26,7 +28,7 @@ npm start          # 生产模式：构建渲染层后启动
 应用默认使用演示数据。点击右上角"连接设备"，可以配置：
 
 - 演示模式：不依赖开发板；
-- 局域网模式：默认地址 `http://10.188.219.51:8787`；
+- 局域网模式：当前开发板地址 `http://192.168.137.32:8787`；
 - 配对令牌：作为 Bearer Token 发送，不写入磁盘。
 
 当前板端会报告 `settingsWrite=true` 和 `remindersWrite=true`，家属端据此启用保存、添加、编辑和删除按钮。不可用的单项硬件能力仍单独禁用，例如本板的亮度滑块。
@@ -73,7 +75,7 @@ Renderer 启用了以下边界（与迁移前一致）：
 - `nodeIntegration: false`；
 - `contextIsolation: true`；
 - `sandbox: true`；
-- 生产构建注入 CSP（`connect-src ws: wss:`，仅允许视频通话媒体 WebSocket），禁止 Renderer 直接联网；
+- 生产构建注入 CSP（`connect-src ws: wss:`，允许受控的视频通话和 AI 视野 WebSocket），禁止其他 Renderer 直连；
 - 仅通过 preload 暴露的白名单方法访问主进程；
 - 外部导航和新窗口默认拒绝。
 
@@ -99,6 +101,7 @@ src/
       components/         侧边栏、顶栏、连接/提醒弹窗
       views/              设备状态、远程设置、提醒管理、语音/视频通话
     video-call-media-adapter.js  视频通话媒体协议适配器（协议逻辑不变）
+    vision-monitor-adapter.js    AI 视野媒体、方向校正与人物框绘制
   shared/                 跨主进程模块错误模型
 scripts/
   dev.js                  开发模式启动器（Vite + Electron）
