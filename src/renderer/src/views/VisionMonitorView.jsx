@@ -10,6 +10,17 @@ const STATE_TEXT = {
   CORRECTED: '检测器已校正目标', LOST: '人物已离开画面', REACQUIRED: '已重新找到人物'
 };
 
+const AUTO_HEAD_STATE_TEXT = {
+  DISABLED: '已关闭',
+  WAITING_FOR_VISION: '等待视觉服务',
+  WAITING_FOR_MOTION: '等待 Motion MCU',
+  SEARCHING: 'HEAD_ONLY · 正在寻找人物',
+  TRACKING: 'HEAD_ONLY · 正在跟随',
+  MANUAL_OVERRIDE: '人工遥控优先',
+  VIDEO_CALL_SUSPENDED: '视频通话期间暂停',
+  FAULT: 'Motion MCU 故障'
+};
+
 const CHASSIS_BUTTONS = [
   { direction: 'FORWARD', label: '前进', shortcut: 'W', className: 'forward' },
   { direction: 'ROTATE_LEFT', label: '原地左转', shortcut: 'A', className: 'left' },
@@ -33,6 +44,9 @@ export default function VisionMonitorView({ state: appState, active }) {
   const motionAdapterRef = useRef(null);
   const generationRef = useRef(0);
   const motionGenerationRef = useRef(0);
+  const autoHeadGenerationRef = useRef(0);
+  const autoHeadRequestRef = useRef(0);
+  const autoHeadWriteRef = useRef(false);
   const pressedChassisRef = useRef(new Map());
   const activeChassisCodeRef = useRef(null);
   const activeHeadCodeRef = useRef(null);
@@ -47,6 +61,9 @@ export default function VisionMonitorView({ state: appState, active }) {
   const [motionMessage, setMotionMessage] = useState('切换后建立安全控制连接');
   const [motionReady, setMotionReady] = useState(false);
   const [motionRetryKey, setMotionRetryKey] = useState(0);
+  const [autoHead, setAutoHead] = useState(null);
+  const [autoHeadBusy, setAutoHeadBusy] = useState(false);
+  const [autoHeadError, setAutoHeadError] = useState('');
 
   useEffect(() => {
     if (!active) return undefined;
@@ -97,6 +114,71 @@ export default function VisionMonitorView({ state: appState, active }) {
   useEffect(() => {
     visionAdapterRef.current?.setOverlayVisible(bboxVisible);
   }, [bboxVisible]);
+
+  useEffect(() => {
+    if (!active || panelMode !== 'ai') return undefined;
+    if (appState.dashboard?.status?.capabilities?.automaticHeadTracking === false) {
+      setAutoHead(null);
+      setAutoHeadError('当前 LongPet 版本不支持自动跟头');
+      return undefined;
+    }
+    const generation = ++autoHeadGenerationRef.current;
+    let timer = null;
+    let stopped = false;
+    const refresh = async () => {
+      if (autoHeadWriteRef.current) {
+        timer = setTimeout(refresh, 250);
+        return;
+      }
+      const request = ++autoHeadRequestRef.current;
+      try {
+        const snapshot = await window.familyDesktop.getAutomaticHeadTracking();
+        if (stopped || generation !== autoHeadGenerationRef.current
+          || request !== autoHeadRequestRef.current) return;
+        setAutoHead(snapshot);
+        setAutoHeadError('');
+      } catch (error) {
+        if (stopped || generation !== autoHeadGenerationRef.current
+          || request !== autoHeadRequestRef.current) return;
+        setAutoHeadError(error?.message || '无法读取自动跟头状态');
+      } finally {
+        if (!stopped && generation === autoHeadGenerationRef.current) {
+          timer = setTimeout(refresh, 1000);
+        }
+      }
+    };
+    void refresh();
+    return () => {
+      stopped = true;
+      autoHeadGenerationRef.current += 1;
+      clearTimeout(timer);
+    };
+  }, [active, panelMode, appState.connection?.baseUrl,
+    appState.dashboard?.status?.capabilities?.automaticHeadTracking]);
+
+  const setAutomaticHeadTracking = async (enabled) => {
+    if (autoHeadBusy) return;
+    autoHeadWriteRef.current = true;
+    const generation = autoHeadGenerationRef.current;
+    const request = ++autoHeadRequestRef.current;
+    setAutoHeadBusy(true);
+    try {
+      const snapshot = await window.familyDesktop.setAutomaticHeadTracking({ enabled });
+      if (request !== autoHeadRequestRef.current
+        || generation !== autoHeadGenerationRef.current) return;
+      setAutoHead(snapshot);
+      setAutoHeadError('');
+      appState.showToast(enabled ? '自动跟随头部已开启' : '自动跟随头部已关闭');
+    } catch (error) {
+      if (request !== autoHeadRequestRef.current
+        || generation !== autoHeadGenerationRef.current) return;
+      setAutoHeadError(error?.message || '自动跟头设置失败');
+      appState.showToast(error?.message || '自动跟头设置失败', true);
+    } finally {
+      autoHeadWriteRef.current = false;
+      setAutoHeadBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!active || panelMode !== 'remote') return undefined;
@@ -273,6 +355,21 @@ export default function VisionMonitorView({ state: appState, active }) {
                 <span className={'vision-state-dot ' + (drawable ? 'tracking' : '')} />
                 <div><strong>{statusText}</strong><small>最近更新 {telemetry ? metric(telemetry.age_ms, 0, ' ms') : '--'}</small></div>
               </div>
+              <label className="vision-debug-switch auto-head-switch">
+                <span>
+                  <strong>自动跟随头部</strong>
+                  <small>{autoHeadError || AUTO_HEAD_STATE_TEXT[autoHead?.state]
+                    || (autoHead ? autoHead.detail : '正在读取设备状态')}</small>
+                </span>
+                <Switch
+                  checked={autoHead?.enabled === true}
+                  disabled={autoHeadBusy || !autoHead
+                    || appState.dashboard?.status?.capabilities?.automaticHeadTracking === false}
+                  loading={autoHeadBusy}
+                  onChange={setAutomaticHeadTracking}
+                  aria-label="自动跟随头部"
+                />
+              </label>
               <label className="vision-debug-switch">
                 <span><strong>显示 AI 调试信息</strong><small>用于开发和比赛演示</small></span>
                 <Switch checked={debug} onChange={setDebug} aria-label="显示 AI 调试信息" />
@@ -285,6 +382,8 @@ export default function VisionMonitorView({ state: appState, active }) {
                   <div><dt>检测置信度</dt><dd>{metric(telemetry?.detector_confidence, 2)}</dd></div><div><dt>跟踪置信度</dt><dd>{metric(telemetry?.tracker_confidence, 2)}</dd></div>
                   <div><dt>特征点</dt><dd>{telemetry?.tracked_points ?? '--'}</dd></div><div><dt>Detector 延迟</dt><dd>{metric(telemetry?.detector_ms, 1, ' ms')}</dd></div>
                   <div><dt>Tracker 延迟</dt><dd>{metric(telemetry?.tracker_ms, 1, ' ms')}</dd></div><div><dt>数据新鲜</dt><dd>{telemetry?.fresh ? '是' : '否'}</dd></div>
+                  <div><dt>Auto Head</dt><dd>{autoHead?.state || '--'}</dd></div><div><dt>Motion 模式</dt><dd>{autoHead?.active ? 'HEAD_ONLY' : '--'}</dd></div>
+                  <div><dt>目标 dx / dy</dt><dd>{autoHead ? `${autoHead.dx} / ${autoHead.dy}` : '--'}</dd></div><div><dt>目标年龄</dt><dd>{metric(autoHead?.targetAgeMs, 0, ' ms')}</dd></div>
                 </dl>
               )}
               <p className="vision-monitor-privacy">仅在本页面打开时传输画面；退出后立即停止远程视频，本地 AI 感知继续运行。</p>

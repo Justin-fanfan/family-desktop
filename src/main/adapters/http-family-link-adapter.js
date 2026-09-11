@@ -71,6 +71,17 @@ class HttpFamilyLinkAdapter {
     return this.request('/api/v1/motion-control/sessions', { method: 'POST' });
   }
 
+  async getAutomaticHeadTracking() {
+    return this.request('/api/v1/automatic-head-tracking');
+  }
+
+  async setAutomaticHeadTracking(payload) {
+    return this.request('/api/v1/automatic-head-tracking', {
+      method: 'PUT',
+      body: payload
+    });
+  }
+
   async createReminder(payload) {
     return this.request('/api/v1/reminders', { method: 'POST', body: payload });
   }

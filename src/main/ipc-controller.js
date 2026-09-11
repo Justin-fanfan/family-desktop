@@ -18,7 +18,9 @@ const CHANNELS = [
   'family:video-call:start',
   'family:video-call:act',
   'family:vision-monitor:start',
-  'family:motion-control:start'
+  'family:motion-control:start',
+  'family:automatic-head-tracking:get',
+  'family:automatic-head-tracking:set'
 ];
 
 function success(data) {
@@ -92,6 +94,12 @@ class IpcController {
       ...(await this.service.createMotionControlSession()),
       baseUrl: this.connection.baseUrl
     }));
+    this.handle('family:automatic-head-tracking:get', async () =>
+      this.service.getAutomaticHeadTracking()
+    );
+    this.handle('family:automatic-head-tracking:set', async (_event, request) =>
+      this.service.setAutomaticHeadTracking(request)
+    );
   }
 
   createConnection(request) {

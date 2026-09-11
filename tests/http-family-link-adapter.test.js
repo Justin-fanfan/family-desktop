@@ -198,3 +198,25 @@ test('HTTP adapter creates an authenticated motion control session', async () =>
     assert.equal(session.leaseTimeoutMs, 350);
   });
 });
+
+test('HTTP adapter reads and updates automatic head tracking', async () => {
+  const requests = [];
+  await withServer(async (request, response) => {
+    requests.push({ method: request.method, url: request.url, body: await readJson(request) });
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({
+      enabled: request.method === 'PUT',
+      active: request.method === 'PUT',
+      state: request.method === 'PUT' ? 'SEARCHING' : 'DISABLED'
+    }));
+  }, async (baseUrl) => {
+    const adapter = new HttpFamilyLinkAdapter({ baseUrl, token: 'pairing-token' });
+    assert.equal((await adapter.getAutomaticHeadTracking()).enabled, false);
+    assert.equal((await adapter.setAutomaticHeadTracking({ enabled: true })).state,
+      'SEARCHING');
+  });
+  assert.deepEqual(requests, [
+    { method: 'GET', url: '/api/v1/automatic-head-tracking', body: null },
+    { method: 'PUT', url: '/api/v1/automatic-head-tracking', body: { enabled: true } }
+  ]);
+});

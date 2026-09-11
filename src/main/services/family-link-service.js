@@ -119,6 +119,14 @@ function validateVideoCallStart(request) {
   return { mode: request.mode };
 }
 
+function validateAutomaticHeadTrackingUpdate(request) {
+  requireObject(request, '自动跟头设置');
+  if (Object.keys(request).length !== 1 || typeof request.enabled !== 'boolean') {
+    throw new FamilyLinkError('VALIDATION_ERROR', '自动跟头设置只允许布尔字段 enabled');
+  }
+  return { enabled: request.enabled };
+}
+
 class FamilyLinkService {
   constructor(adapter) {
     if (!adapter) {
@@ -176,12 +184,23 @@ class FamilyLinkService {
   async createMotionControlSession() {
     return this.adapter.createMotionControlSession();
   }
+
+  async getAutomaticHeadTracking() {
+    return this.adapter.getAutomaticHeadTracking();
+  }
+
+  async setAutomaticHeadTracking(request) {
+    return this.adapter.setAutomaticHeadTracking(
+      validateAutomaticHeadTrackingUpdate(request)
+    );
+  }
 }
 
 module.exports = {
   FamilyLinkService,
   validateReminderDraft,
   validateSettingsPatch,
+  validateAutomaticHeadTrackingUpdate,
   validateVideoCallAction,
   validateVideoCallStart
 };

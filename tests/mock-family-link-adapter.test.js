@@ -112,3 +112,13 @@ test('mock family call selects voice mode and reports busy while active', async 
     (error) => error.code === 'DEVICE_BUSY'
   );
 });
+
+test('mock automatic head tracking is off by default and can be toggled', async () => {
+  const service = new FamilyLinkService(new MockFamilyLinkAdapter({ delayMs: 0 }));
+  assert.equal((await service.getAutomaticHeadTracking()).enabled, false);
+  const enabled = await service.setAutomaticHeadTracking({ enabled: true });
+  assert.equal(enabled.enabled, true);
+  assert.equal(enabled.state, 'SEARCHING');
+  const disabled = await service.setAutomaticHeadTracking({ enabled: false });
+  assert.equal(disabled.state, 'DISABLED');
+});

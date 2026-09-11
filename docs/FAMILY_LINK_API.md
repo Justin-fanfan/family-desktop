@@ -432,10 +432,12 @@ WebSocket 消息使用现有 LPMF 二进制帧，`streamType=control`，payload 
   "mcu_online": true,
   "fault": false,
   "remote_control_active": true,
+  "automatic_head_tracking_active": false,
   "mode": "MANUAL",
   "motion": "STOPPED",
   "stop_reason": "家属端请求停车",
   "servo_us": 1570,
+  "target_available": false,
   "imu_available": true,
   "detail": "Motion MCU 状态正常",
   "updated_at": "2026-09-11T12:00:01.000Z"
@@ -452,7 +454,46 @@ WebSocket 消息使用现有 LPMF 二进制帧，`streamType=control`，payload 
 
 安全时序和用户操作说明见 `FAMILY_REMOTE_CONTROL_V1.md`。
 
-## 9. 配对与鉴权建议
+## 9. 自动跟随头部
+
+AI 视野页通过普通 FamilyLink REST 读取和切换自动跟头，不直接操作 UART。
+
+### `GET /api/v1/automatic-head-tracking`
+
+```json
+{
+  "enabled": true,
+  "active": true,
+  "state": "TRACKING",
+  "visionStatus": "TRACKING",
+  "frameSequence": 12042,
+  "targetAgeMs": 34,
+  "dx": -86,
+  "dy": 5,
+  "area": 23840,
+  "detail": "正在自动跟随头部",
+  "updatedAt": "2026-09-12T01:30:00.000Z"
+}
+```
+
+### `PUT /api/v1/automatic-head-tracking`
+
+请求体只允许一个布尔字段：
+
+```json
+{ "enabled": true }
+```
+
+成功返回更新后的同结构快照。`enabled` 表示用户意图，`active` 表示当前是否真正持有 HEAD_ONLY；
+因此 Vision、Motion MCU、MANUAL 或 VideoCall 门控生效时，可能出现 `enabled=true`、`active=false`。
+`state` 取值包括 `DISABLED`、`WAITING_FOR_VISION`、`WAITING_FOR_MOTION`、`SEARCHING`、
+`TRACKING`、`MANUAL_OVERRIDE`、`VIDEO_CALL_SUSPENDED`、`FAULT`。
+
+状态接口 `capabilities.automaticHeadTracking` 用于旧版本兼容。接口不可用时返回
+`503 AUTO_HEAD_UNAVAILABLE`；字段错误返回 `422 VALIDATION_ERROR`。自动跟头默认关闭，且只控制头部，
+本接口没有开启 FOLLOW chassis 的能力。
+
+## 10. 配对与鉴权建议
 
 当前板端已经要求 Bearer Token 并开放设置和提醒写入；家属端仍必须依据状态接口的能力字段决定是否启用每类写操作。Token 目前由运维配置，板端签发流程尚未实现。建议下一步：
 
@@ -465,7 +506,7 @@ WebSocket 消息使用现有 LPMF 二进制帧，`streamType=control`，payload 
 
 比赛阶段不得直接把 root SSH 密码包装成家属端鉴权，也不得让 Electron 通过 SSH 修改数据库或 systemd。
 
-## 10. 后续事件接口
+## 11. 后续事件接口
 
 当前 MVP 使用手动刷新。后续可增加 `/api/v1/events` WebSocket，用于：
 

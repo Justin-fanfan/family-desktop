@@ -76,6 +76,19 @@ class MockFamilyLinkAdapter {
       errorCode: null,
       errorMessage: null
     });
+    this.automaticHeadTracking = clone(options.automaticHeadTracking ?? {
+      enabled: false,
+      active: false,
+      state: 'DISABLED',
+      visionStatus: 'SEARCHING',
+      frameSequence: 0,
+      targetAgeMs: 0,
+      dx: 0,
+      dy: 0,
+      area: 0,
+      detail: '自动跟随头部已关闭',
+      updatedAt: nowIso()
+    });
   }
 
   async wait() {
@@ -95,7 +108,8 @@ class MockFamilyLinkAdapter {
         remindersWrite: true,
         videoCallSignaling: true,
         visionMonitor: false,
-        motionControl: false
+        motionControl: false,
+        automaticHeadTracking: true
       },
       device: {
         id: 'longpet-demo-001',
@@ -223,6 +237,27 @@ class MockFamilyLinkAdapter {
       'MOTION_CONTROL_UNAVAILABLE',
       '演示模式不连接 Motion MCU，请先连接 LongPet 设备'
     );
+  }
+
+  async getAutomaticHeadTracking() {
+    await this.wait();
+    return clone(this.automaticHeadTracking);
+  }
+
+  async setAutomaticHeadTracking(payload) {
+    await this.wait();
+    this.automaticHeadTracking = {
+      ...this.automaticHeadTracking,
+      enabled: payload.enabled,
+      active: payload.enabled,
+      state: payload.enabled ? 'SEARCHING' : 'DISABLED',
+      detail: payload.enabled ? 'HEAD_ONLY，等待新目标' : '自动跟随头部已关闭',
+      dx: 0,
+      dy: 0,
+      area: 0,
+      updatedAt: nowIso()
+    };
+    return clone(this.automaticHeadTracking);
   }
 
   async startVideoCall(payload) {

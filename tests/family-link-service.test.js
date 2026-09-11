@@ -7,6 +7,7 @@ const {
   FamilyLinkService,
   validateReminderDraft,
   validateSettingsPatch,
+  validateAutomaticHeadTrackingUpdate,
   validateVideoCallAction,
   validateVideoCallStart
 } = require('../src/main/services/family-link-service');
@@ -143,4 +144,28 @@ test('motion control session is requested through the service boundary', async (
   const session = await service.createMotionControlSession();
   assert.equal(calls, 1);
   assert.equal(session.sessionId, 'motion-2');
+});
+
+test('automatic head tracking validates boolean state and stays behind service boundary', async () => {
+  let captured = null;
+  const service = new FamilyLinkService({
+    async getAutomaticHeadTracking() { return { enabled: false, state: 'DISABLED' }; },
+    async setAutomaticHeadTracking(request) {
+      captured = request;
+      return { enabled: request.enabled, state: request.enabled ? 'SEARCHING' : 'DISABLED' };
+    }
+  });
+  assert.equal((await service.getAutomaticHeadTracking()).enabled, false);
+  const enabled = await service.setAutomaticHeadTracking({ enabled: true });
+  assert.deepEqual(captured, { enabled: true });
+  assert.equal(enabled.state, 'SEARCHING');
+  assert.deepEqual(validateAutomaticHeadTrackingUpdate({ enabled: false }), { enabled: false });
+  assert.throws(
+    () => validateAutomaticHeadTrackingUpdate({ enabled: 1 }),
+    (error) => error.code === 'VALIDATION_ERROR'
+  );
+  assert.throws(
+    () => validateAutomaticHeadTrackingUpdate({ enabled: true, mode: 'FOLLOW' }),
+    (error) => error.code === 'VALIDATION_ERROR'
+  );
 });
