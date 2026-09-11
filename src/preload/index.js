@@ -25,5 +25,6 @@ contextBridge.exposeInMainWorld('familyDesktop', Object.freeze({
   getVideoCall: () => invoke('family:video-call:get'),
   startVideoCall: (request) => invoke('family:video-call:start', request),
   applyVideoCallAction: (request) => invoke('family:video-call:act', request),
-  startVisionMonitor: () => invoke('family:vision-monitor:start')
+  startVisionMonitor: () => invoke('family:vision-monitor:start'),
+  startMotionControl: () => invoke('family:motion-control:start')
 }));

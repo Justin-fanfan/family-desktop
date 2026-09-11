@@ -12,6 +12,8 @@ LongPet 家属端桌面应用。它提供设备状态查看、远程设置和提
 - 正式 HTTP 客户端及接口校验已经实现；
 - 板端已实现带 Token 的 `FamilyLink` 读写闭环，可真实读取状态并远程修改设置、创建/编辑/删除提醒；
 - “AI 视野”通过短时会话令牌接收板端 JPEG 与人物跟踪元数据，并在 Canvas 上绘制人物框；
+- “AI 视野”页可切换到“远程操控”，在不中断实时画面的情况下控制头部和底盘；
+- 运动控制使用独立低延迟 WebSocket、临时会话令牌和按住刷新/松开停车语义；窗口失焦、隐藏、切页、断线或退出都会请求 STOP；
 - 视频通话和 AI 视野会读取板端发送的摄像头旋转角度，仅校正 LongPet 摄像头画面；
 - 配对令牌仅保存在 Electron 主进程内存中，关闭应用后清除。
 
@@ -32,6 +34,8 @@ npm start          # 生产模式：构建渲染层后启动
 - 配对令牌：作为 Bearer Token 发送，不写入磁盘。
 
 当前板端会报告 `settingsWrite=true` 和 `remindersWrite=true`，家属端据此启用保存、添加、编辑和删除按钮。不可用的单项硬件能力仍单独禁用，例如本板的亮度滑块。
+
+远程操控入口位于“AI 视野”页面右侧标签。底盘使用 W/S/A/D 或页面按钮，Space 立即停车；头部使用 J/K/L；Esc 停车并退出远控。底盘方向必须按住才持续刷新，松开即停车。动作按钮只有在板端报告 UART 可用、Motion MCU 在线、无 fault 且处于 MANUAL 时才会解锁。当前没有开放硬件可靠性尚未确认的 SHIFT 平移。
 
 ## 测试与 Release 构建
 
@@ -67,7 +71,10 @@ Renderer UI (Vite + React + Semi Design, dist/renderer)
   -> Electron Main IPC Controller
   -> FamilyLinkService
   -> HttpFamilyLinkAdapter / MockFamilyLinkAdapter
-  -> LongPet FamilyLink API
+  -> LongPet FamilyLink API（签发短时会话）
+  -> Renderer MotionControlAdapter
+  -> 独立 Motion WebSocket :8790
+  -> LongPet MotionService -> MotionPort -> UART -> Motion MCU
 ```
 
 Renderer 启用了以下边界（与迁移前一致）：
@@ -102,6 +109,7 @@ src/
       views/              设备状态、远程设置、提醒管理、语音/视频通话
     video-call-media-adapter.js  视频通话媒体协议适配器（协议逻辑不变）
     vision-monitor-adapter.js    AI 视野媒体、方向校正与人物框绘制
+    motion-control-adapter.js    独立运动通道、按住刷新与失效停车
   shared/                 跨主进程模块错误模型
 scripts/
   dev.js                  开发模式启动器（Vite + Electron）
@@ -116,4 +124,5 @@ docs/
 ## 重要文档
 
 - [FamilyLink API 规范](docs/FAMILY_LINK_API.md)
+- [Family Remote Control V1 使用与验收](docs/FAMILY_REMOTE_CONTROL_V1.md)
 - [MVP 实施报告](docs/IMPLEMENTATION_REPORT.md)

@@ -93,7 +93,9 @@ class MockFamilyLinkAdapter {
         settingsWrite: true,
         remindersRead: true,
         remindersWrite: true,
-        videoCallSignaling: true
+        videoCallSignaling: true,
+        visionMonitor: false,
+        motionControl: false
       },
       device: {
         id: 'longpet-demo-001',
@@ -212,6 +214,14 @@ class MockFamilyLinkAdapter {
     throw new FamilyLinkError(
       'VISION_MONITOR_UNAVAILABLE',
       '演示模式不连接真实摄像头，请先连接 LongPet 设备'
+    );
+  }
+
+  async createMotionControlSession() {
+    await this.wait();
+    throw new FamilyLinkError(
+      'MOTION_CONTROL_UNAVAILABLE',
+      '演示模式不连接 Motion MCU，请先连接 LongPet 设备'
     );
   }
 

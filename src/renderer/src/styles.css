@@ -221,6 +221,36 @@ main { flex: 1; overflow-y: auto; padding: 26px 30px; min-width: 0; }
 .vision-debug-grid dt { color: var(--lp-text-secondary); font-size: 0.75rem; }
 .vision-debug-grid dd { margin: 3px 0 0; font-size: 0.86rem; font-weight: 600; overflow-wrap: anywhere; }
 .vision-monitor-privacy { margin-top: auto; padding: 15px 0; color: var(--lp-text-secondary); font-size: 0.8rem; line-height: 1.5; }
+.vision-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 16px; border-radius: 12px; background: var(--lp-surface-soft); }
+.vision-mode-tabs button { border: none; border-radius: 9px; padding: 10px 8px; cursor: pointer; color: var(--lp-text-secondary); background: transparent; font-weight: 600; }
+.vision-mode-tabs button.active { color: #fff; background: var(--lp-primary); box-shadow: var(--lp-shadow); }
+.motion-control-panel { display: flex; flex-direction: column; min-height: 430px; }
+.motion-control-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.motion-control-heading h2 { margin: 2px 0 6px; }
+.motion-ready-badge { padding: 5px 9px; border-radius: 999px; color: var(--lp-text-secondary); background: var(--lp-fill); font-size: 0.76rem; font-weight: 700; }
+.motion-ready-badge.online { color: var(--lp-success); background: var(--lp-success-soft); }
+.motion-section { margin-top: 14px; }
+.motion-section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.motion-section-title small { color: var(--lp-text-secondary); }
+.head-control-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.head-control-row button, .chassis-control-grid button { min-height: 44px; border: 1px solid var(--lp-border); border-radius: 10px; background: var(--lp-surface-soft); color: var(--lp-text); cursor: pointer; font-weight: 600; touch-action: none; user-select: none; }
+.head-control-row button:hover:not(:disabled), .chassis-control-grid button:hover:not(:disabled) { border-color: var(--lp-primary); background: var(--lp-primary-soft); }
+.head-control-row button:active:not(:disabled), .chassis-control-grid button:active:not(:disabled) { transform: translateY(1px); background: var(--lp-primary-soft); }
+.head-control-row button:disabled, .chassis-control-grid button:disabled { cursor: not-allowed; opacity: 0.46; }
+kbd { padding: 1px 5px; margin-left: 3px; border: 1px solid var(--lp-border); border-radius: 5px; background: var(--lp-surface); font-family: inherit; font-size: 0.72rem; }
+.chassis-control-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; grid-template-areas: '. forward .' 'left stop right' '. backward .'; }
+.chassis-control-grid .forward { grid-area: forward; }
+.chassis-control-grid .backward { grid-area: backward; }
+.chassis-control-grid .left { grid-area: left; }
+.chassis-control-grid .right { grid-area: right; }
+.chassis-control-grid .motion-stop-button { grid-area: stop; color: #fff; background: var(--lp-danger); border-color: var(--lp-danger); }
+.chassis-control-grid .motion-stop-button:hover:not(:disabled) { background: #c94343; border-color: #c94343; }
+.motion-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 14px 0 8px; }
+.motion-status-grid div { min-width: 0; padding: 8px 9px; border-radius: 9px; background: var(--lp-surface-soft); }
+.motion-status-grid dt { color: var(--lp-text-secondary); font-size: 0.72rem; }
+.motion-status-grid dd { margin: 2px 0 0; font-size: 0.82rem; font-weight: 700; overflow-wrap: anywhere; }
+.motion-fault { margin: 5px 0; color: var(--lp-danger); font-weight: 600; font-size: 0.82rem; }
+.motion-keyboard-help { margin: auto 0 0; padding-top: 10px; color: var(--lp-text-secondary); font-size: 0.76rem; line-height: 1.45; }
 
 /* ---- 弹窗 ---- */
 .dialog-help { font-size: 0.85rem; color: var(--lp-text-secondary); margin: 2px 0 18px; }

@@ -86,7 +86,9 @@ Renderer UI
     "settingsWrite": true,
     "remindersRead": true,
     "remindersWrite": true,
-    "videoCallSignaling": true
+    "videoCallSignaling": true,
+    "visionMonitor": true,
+    "motionControl": true
   },
   "device": {
     "id": "longpet-ls-gd-001",
@@ -344,7 +346,113 @@ Renderer UI
 
 家属端每秒读取一次状态；只在 `connected && mediaReady` 时显示“通话已连接”，不会再把控制信令成功误报为媒体已连接。
 
-## 8. 配对与鉴权建议
+## 8. Family Remote Control 会话
+
+运动控制不通过 FamilyLink HTTP 逐条发送。HTTP 只完成长期 Bearer Token 鉴权并签发短时会话；实时控制使用独立 WebSocket，避免与 JPEG 画面争用队列。
+
+### `POST /api/v1/motion-control/sessions`
+
+无请求体。成功返回 HTTP 201：
+
+```json
+{
+  "sessionId": "temporary-session-id",
+  "sessionToken": "temporary-random-token",
+  "port": 8790,
+  "protocolVersion": 1,
+  "mediaFrameVersion": 1,
+  "refreshIntervalMs": 150,
+  "leaseTimeoutMs": 350,
+  "defaultSpeed": 20,
+  "headStepUs": 20,
+  "expiresAt": "2026-09-11T12:00:30.000Z"
+}
+```
+
+- 临时会话有效期为 30 秒，只用于建立一次控制连接；
+- 同一时间只允许一个待连接或活跃控制会话；
+- 已有控制者时返回 HTTP 409 `MOTION_CONTROL_BUSY`；
+- Motion Service 未启动时返回 HTTP 503 `MOTION_CONTROL_UNAVAILABLE`；
+- `sessionToken` 不得持久化、记录到日志或放入 URL。
+
+客户端根据 FamilyLink URL 主机推导控制地址：
+
+```text
+http://<device>:8787 -> ws://<device>:8790/motion-control/v1
+https://<device>     -> wss://<device>:8790/motion-control/v1
+```
+
+WebSocket 消息使用现有 LPMF 二进制帧，`streamType=control`，payload 为 UTF-8 JSON。第一帧必须在 6 秒内发送：
+
+```json
+{
+  "type": "authenticate",
+  "protocol_version": 1,
+  "session_id": "temporary-session-id",
+  "token": "temporary-random-token"
+}
+```
+
+客户端指令：
+
+```json
+{ "type": "chassis", "direction": "FORWARD", "speed": 20 }
+{ "type": "chassis", "direction": "BACKWARD", "speed": 20 }
+{ "type": "chassis", "direction": "ROTATE_LEFT", "speed": 20 }
+{ "type": "chassis", "direction": "ROTATE_RIGHT", "speed": 20 }
+{ "type": "stop" }
+{ "type": "head", "action": "LEFT", "step_us": 20 }
+{ "type": "head", "action": "CENTER" }
+{ "type": "head", "action": "RIGHT", "step_us": 20 }
+{ "type": "release" }
+```
+
+底盘方向没有 SHIFT。方向速度范围为 `1..100`，头部步长范围为 `1..100 us`。底盘按住期间客户端按 `refreshIntervalMs` 重发指令，松开立即发送 `stop`；头部松开只停止步进刷新并保持位置，不发送底盘 STOP。
+
+鉴权并进入 MANUAL 后，服务端先发送：
+
+```json
+{
+  "type": "control_started",
+  "protocol_version": 1,
+  "refresh_interval_ms": 150,
+  "lease_timeout_ms": 350,
+  "default_speed": 20,
+  "head_step_us": 20
+}
+```
+
+运行中发送状态：
+
+```json
+{
+  "type": "motion_status",
+  "protocol_version": 1,
+  "uart_available": true,
+  "mcu_online": true,
+  "fault": false,
+  "remote_control_active": true,
+  "mode": "MANUAL",
+  "motion": "STOPPED",
+  "stop_reason": "家属端请求停车",
+  "servo_us": 1570,
+  "imu_available": true,
+  "detail": "Motion MCU 状态正常",
+  "updated_at": "2026-09-11T12:00:01.000Z"
+}
+```
+
+错误消息为：
+
+```json
+{ "type": "error", "code": "MOTION_MCU_OFFLINE", "message": "Motion MCU 没有响应" }
+```
+
+可能的 code 包括 `AUTHENTICATION_FAILED`、`AUTHENTICATION_TIMEOUT`、`INVALID_COMMAND`、`MOTION_CONTROL_BUSY`、`MOTION_UART_UNAVAILABLE`、`MOTION_UART_DISCONNECTED`、`MOTION_MCU_OFFLINE`、`MOTION_MCU_FAULT`、`MOTION_MODE_CHANGED`、`MOTION_COMMAND_FAILED`、`MOTION_WRITE_FAILED` 和 `MOTION_CONTROL_ENDED`。
+
+安全时序和用户操作说明见 `FAMILY_REMOTE_CONTROL_V1.md`。
+
+## 9. 配对与鉴权建议
 
 当前板端已经要求 Bearer Token 并开放设置和提醒写入；家属端仍必须依据状态接口的能力字段决定是否启用每类写操作。Token 目前由运维配置，板端签发流程尚未实现。建议下一步：
 
@@ -357,7 +465,7 @@ Renderer UI
 
 比赛阶段不得直接把 root SSH 密码包装成家属端鉴权，也不得让 Electron 通过 SSH 修改数据库或 systemd。
 
-## 9. 后续事件接口
+## 10. 后续事件接口
 
 当前 MVP 使用手动刷新。后续可增加 `/api/v1/events` WebSocket，用于：
 

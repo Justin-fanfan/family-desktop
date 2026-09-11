@@ -27,7 +27,7 @@ export default function App() {
         <DashboardView state={state} active={state.activeView === 'dashboard'} />
         <SettingsView state={state} active={state.activeView === 'settings'} />
         <RemindersView state={state} active={state.activeView === 'reminders'} />
-        <VisionMonitorView active={state.activeView === 'ai-view'} />
+        <VisionMonitorView state={state} active={state.activeView === 'ai-view'} />
         <VideoCallView state={state} active={state.activeView === 'video-call'} />
       </main>
       <ConnectionDialog state={state} />

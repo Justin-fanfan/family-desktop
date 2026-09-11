@@ -17,7 +17,8 @@ const CHANNELS = [
   'family:video-call:get',
   'family:video-call:start',
   'family:video-call:act',
-  'family:vision-monitor:start'
+  'family:vision-monitor:start',
+  'family:motion-control:start'
 ];
 
 function success(data) {
@@ -85,6 +86,10 @@ class IpcController {
     );
     this.handle('family:vision-monitor:start', async () => ({
       ...(await this.service.createVisionMonitorSession()),
+      baseUrl: this.connection.baseUrl
+    }));
+    this.handle('family:motion-control:start', async () => ({
+      ...(await this.service.createMotionControlSession()),
       baseUrl: this.connection.baseUrl
     }));
   }

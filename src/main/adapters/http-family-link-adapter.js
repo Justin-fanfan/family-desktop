@@ -67,6 +67,10 @@ class HttpFamilyLinkAdapter {
     return this.request('/api/v1/vision-monitor/sessions', { method: 'POST' });
   }
 
+  async createMotionControlSession() {
+    return this.request('/api/v1/motion-control/sessions', { method: 'POST' });
+  }
+
   async createReminder(payload) {
     return this.request('/api/v1/reminders', { method: 'POST', body: payload });
   }

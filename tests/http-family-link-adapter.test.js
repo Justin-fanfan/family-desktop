@@ -179,3 +179,22 @@ test('HTTP adapter creates an authenticated AI view session', async () => {
     assert.equal(session.sessionToken, 'ephemeral');
   });
 });
+
+test('HTTP adapter creates an authenticated motion control session', async () => {
+  await withServer(async (request, response) => {
+    assert.equal(request.method, 'POST');
+    assert.equal(request.url, '/api/v1/motion-control/sessions');
+    assert.equal(request.headers.authorization, 'Bearer pairing-token');
+    assert.equal(await readJson(request), null);
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({
+      sessionId: 'motion-1', sessionToken: 'ephemeral-motion', port: 8790,
+      protocolVersion: 1, refreshIntervalMs: 150, leaseTimeoutMs: 350
+    }));
+  }, async (baseUrl) => {
+    const adapter = new HttpFamilyLinkAdapter({ baseUrl, token: 'pairing-token' });
+    const session = await adapter.createMotionControlSession();
+    assert.equal(session.port, 8790);
+    assert.equal(session.leaseTimeoutMs, 350);
+  });
+});

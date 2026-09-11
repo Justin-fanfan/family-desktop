@@ -131,3 +131,16 @@ test('AI view session is requested through the service boundary', async () => {
   assert.equal(calls, 1);
   assert.equal(session.sessionId, 'view-2');
 });
+
+test('motion control session is requested through the service boundary', async () => {
+  let calls = 0;
+  const service = new FamilyLinkService({
+    async createMotionControlSession() {
+      calls += 1;
+      return { sessionId: 'motion-2', sessionToken: 'once', port: 8790 };
+    }
+  });
+  const session = await service.createMotionControlSession();
+  assert.equal(calls, 1);
+  assert.equal(session.sessionId, 'motion-2');
+});

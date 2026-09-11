@@ -11,7 +11,7 @@
     "start": "vite build && electron .",
     "start:prod": "electron .",
     "test": "node --test",
-    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/video-call-media-adapter.js && node --check src/renderer/vision-monitor-adapter.js && node --check scripts/real-device-write-smoke.js && node --check scripts/dev.js && vite build",
+    "check": "node --check src/main/index.js && node --check src/main/ipc-controller.js && node --check src/main/services/family-link-service.js && node --check src/main/adapters/http-family-link-adapter.js && node --check src/main/adapters/mock-family-link-adapter.js && node --check src/preload/index.js && node --check src/renderer/video-call-media-adapter.js && node --check src/renderer/vision-monitor-adapter.js && node --check src/renderer/motion-control-adapter.js && node --check scripts/real-device-write-smoke.js && node --check scripts/dev.js && vite build",
     "smoke:real-write": "node scripts/real-device-write-smoke.js",
     "build:release": "npm run build && electron-builder --win dir"
   },

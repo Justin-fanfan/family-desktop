@@ -91,6 +91,7 @@
       this.drawTimer = null;
       this.resizeObserver = null;
       this.cameraRotation = 0;
+      this.overlayVisible = true;
     }
 
     async connect(baseUrl, session) {
@@ -231,7 +232,7 @@
       drawImageWithRotation(context, this.bitmap, offsetX, offsetY,
         drawWidth, drawHeight, this.cameraRotation);
 
-      if (!shouldDisplayTarget(this.target)) return;
+      if (!this.overlayVisible || !shouldDisplayTarget(this.target)) return;
       const { x, y, w, h } = this.target.bbox;
       const left = offsetX + x * drawWidth;
       const top = offsetY + y * drawHeight;
@@ -257,6 +258,11 @@
       this.sequence = (this.sequence + 1) >>> 0;
       this.socket.send(encodeFrame(STREAM.control, this.sequence,
         new TextEncoder().encode(JSON.stringify(object))));
+    }
+
+    setOverlayVisible(visible) {
+      this.overlayVisible = visible !== false;
+      this.draw();
     }
 
     reportFailure(code, message) {

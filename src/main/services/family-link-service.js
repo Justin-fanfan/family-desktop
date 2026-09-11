@@ -172,6 +172,10 @@ class FamilyLinkService {
   async createVisionMonitorSession() {
     return this.adapter.createVisionMonitorSession();
   }
+
+  async createMotionControlSession() {
+    return this.adapter.createMotionControlSession();
+  }
 }
 
 module.exports = {

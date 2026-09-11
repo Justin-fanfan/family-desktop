@@ -54,3 +54,13 @@ test('AI target metadata rejects an incompatible protocol version', () => {
     type: 'vision_target', protocol_version: 2
   }), /版本无效/);
 });
+
+test('AI bbox visibility is a renderer-only switch', () => {
+  const adapter = new window.LongPetVisionMonitorAdapter();
+  adapter.target = { present: true, fresh: true, bbox: { x: 0, y: 0, w: 1, h: 1 } };
+  adapter.setOverlayVisible(false);
+  assert.equal(adapter.overlayVisible, false);
+  assert.notEqual(adapter.target, null);
+  adapter.setOverlayVisible(true);
+  assert.equal(adapter.overlayVisible, true);
+});

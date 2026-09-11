@@ -243,6 +243,7 @@ export function useAppState({ onToast }) {
   const configureConnection = useCallback(async (request) => {
     await runBusy(async () => {
       try {
+        window.dispatchEvent(new Event('longpet-connection-changing'));
         await adapterRef.current?.stop();
         const conn = await window.familyDesktop.configureConnection(request);
         connectionRef.current = conn;
