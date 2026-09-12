@@ -29,5 +29,8 @@ contextBridge.exposeInMainWorld('familyDesktop', Object.freeze({
   startMotionControl: () => invoke('family:motion-control:start'),
   getAutomaticHeadTracking: () => invoke('family:automatic-head-tracking:get'),
   setAutomaticHeadTracking: (request) =>
-    invoke('family:automatic-head-tracking:set', request)
+    invoke('family:automatic-head-tracking:set', request),
+  getAutomaticTracking: () => invoke('family:automatic-tracking:get'),
+  setAutomaticTracking: (request) =>
+    invoke('family:automatic-tracking:set', request)
 }));

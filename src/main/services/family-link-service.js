@@ -127,6 +127,20 @@ function validateAutomaticHeadTrackingUpdate(request) {
   return { enabled: request.enabled };
 }
 
+const AUTOMATIC_TRACKING_MODES = new Set(['DISABLED', 'HEAD_ONLY', 'PERSON_FOLLOW']);
+
+function validateAutomaticTrackingUpdate(request) {
+  requireObject(request, '自动视觉运动设置');
+  if (Object.keys(request).length !== 1
+    || !AUTOMATIC_TRACKING_MODES.has(request.mode)) {
+    throw new FamilyLinkError(
+      'VALIDATION_ERROR',
+      '自动模式只支持 DISABLED、HEAD_ONLY 或 PERSON_FOLLOW'
+    );
+  }
+  return { mode: request.mode };
+}
+
 class FamilyLinkService {
   constructor(adapter) {
     if (!adapter) {
@@ -194,6 +208,16 @@ class FamilyLinkService {
       validateAutomaticHeadTrackingUpdate(request)
     );
   }
+
+  async getAutomaticTracking() {
+    return this.adapter.getAutomaticTracking();
+  }
+
+  async setAutomaticTracking(request) {
+    return this.adapter.setAutomaticTracking(
+      validateAutomaticTrackingUpdate(request)
+    );
+  }
 }
 
 module.exports = {
@@ -201,6 +225,7 @@ module.exports = {
   validateReminderDraft,
   validateSettingsPatch,
   validateAutomaticHeadTrackingUpdate,
+  validateAutomaticTrackingUpdate,
   validateVideoCallAction,
   validateVideoCallStart
 };

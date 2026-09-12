@@ -21,6 +21,17 @@ const AUTO_HEAD_STATE_TEXT = {
   FAULT: 'Motion MCU 故障'
 };
 
+const FOLLOW_STATE_TEXT = {
+  DISABLED: '已关闭', ACQUIRING: '确认人物目标', ALIGNING: '头身对齐中',
+  APPROACHING: '低速接近中', HOLDING: '保持安全距离', LOST: '目标丢失，等待重新确认'
+};
+
+const AUTO_TRACKING_MODES = [
+  { value: 'DISABLED', label: '关闭' },
+  { value: 'HEAD_ONLY', label: '仅头部' },
+  { value: 'PERSON_FOLLOW', label: '人物跟随' }
+];
+
 const CHASSIS_BUTTONS = [
   { direction: 'FORWARD', label: '前进', shortcut: 'W', className: 'forward' },
   { direction: 'ROTATE_LEFT', label: '原地左转', shortcut: 'A', className: 'left' },
@@ -132,7 +143,7 @@ export default function VisionMonitorView({ state: appState, active }) {
       }
       const request = ++autoHeadRequestRef.current;
       try {
-        const snapshot = await window.familyDesktop.getAutomaticHeadTracking();
+        const snapshot = await window.familyDesktop.getAutomaticTracking();
         if (stopped || generation !== autoHeadGenerationRef.current
           || request !== autoHeadRequestRef.current) return;
         setAutoHead(snapshot);
@@ -156,19 +167,20 @@ export default function VisionMonitorView({ state: appState, active }) {
   }, [active, panelMode, appState.connection?.baseUrl,
     appState.dashboard?.status?.capabilities?.automaticHeadTracking]);
 
-  const setAutomaticHeadTracking = async (enabled) => {
+  const setAutomaticTracking = async (mode) => {
     if (autoHeadBusy) return;
     autoHeadWriteRef.current = true;
     const generation = autoHeadGenerationRef.current;
     const request = ++autoHeadRequestRef.current;
     setAutoHeadBusy(true);
     try {
-      const snapshot = await window.familyDesktop.setAutomaticHeadTracking({ enabled });
+      const snapshot = await window.familyDesktop.setAutomaticTracking({ mode });
       if (request !== autoHeadRequestRef.current
         || generation !== autoHeadGenerationRef.current) return;
       setAutoHead(snapshot);
       setAutoHeadError('');
-      appState.showToast(enabled ? '自动跟随头部已开启' : '自动跟随头部已关闭');
+      const label = AUTO_TRACKING_MODES.find((item) => item.value === mode)?.label;
+      appState.showToast(`自动模式已切换为${label || mode}`);
     } catch (error) {
       if (request !== autoHeadRequestRef.current
         || generation !== autoHeadGenerationRef.current) return;
@@ -355,21 +367,26 @@ export default function VisionMonitorView({ state: appState, active }) {
                 <span className={'vision-state-dot ' + (drawable ? 'tracking' : '')} />
                 <div><strong>{statusText}</strong><small>最近更新 {telemetry ? metric(telemetry.age_ms, 0, ' ms') : '--'}</small></div>
               </div>
-              <label className="vision-debug-switch auto-head-switch">
+              <div className="auto-tracking-control auto-head-switch">
                 <span>
-                  <strong>自动跟随头部</strong>
-                  <small>{autoHeadError || AUTO_HEAD_STATE_TEXT[autoHead?.state]
+                  <strong>自动运动模式</strong>
+                  <small>{autoHeadError
+                    || (autoHead?.mode === 'PERSON_FOLLOW'
+                      ? FOLLOW_STATE_TEXT[autoHead?.followState]
+                      : AUTO_HEAD_STATE_TEXT[autoHead?.state])
                     || (autoHead ? autoHead.detail : '正在读取设备状态')}</small>
                 </span>
-                <Switch
-                  checked={autoHead?.enabled === true}
-                  disabled={autoHeadBusy || !autoHead
-                    || appState.dashboard?.status?.capabilities?.automaticHeadTracking === false}
-                  loading={autoHeadBusy}
-                  onChange={setAutomaticHeadTracking}
-                  aria-label="自动跟随头部"
-                />
-              </label>
+                <div className="auto-tracking-modes" role="radiogroup" aria-label="自动运动模式">
+                  {AUTO_TRACKING_MODES.map((item) => (
+                    <button type="button" key={item.value} role="radio"
+                      aria-checked={(autoHead?.mode || 'DISABLED') === item.value}
+                      className={(autoHead?.mode || 'DISABLED') === item.value ? 'active' : ''}
+                      disabled={autoHeadBusy || !autoHead
+                        || appState.dashboard?.status?.capabilities?.automaticHeadTracking === false}
+                      onClick={() => setAutomaticTracking(item.value)}>{item.label}</button>
+                  ))}
+                </div>
+              </div>
               <label className="vision-debug-switch">
                 <span><strong>显示 AI 调试信息</strong><small>用于开发和比赛演示</small></span>
                 <Switch checked={debug} onChange={setDebug} aria-label="显示 AI 调试信息" />
@@ -382,7 +399,10 @@ export default function VisionMonitorView({ state: appState, active }) {
                   <div><dt>检测置信度</dt><dd>{metric(telemetry?.detector_confidence, 2)}</dd></div><div><dt>跟踪置信度</dt><dd>{metric(telemetry?.tracker_confidence, 2)}</dd></div>
                   <div><dt>特征点</dt><dd>{telemetry?.tracked_points ?? '--'}</dd></div><div><dt>Detector 延迟</dt><dd>{metric(telemetry?.detector_ms, 1, ' ms')}</dd></div>
                   <div><dt>Tracker 延迟</dt><dd>{metric(telemetry?.tracker_ms, 1, ' ms')}</dd></div><div><dt>数据新鲜</dt><dd>{telemetry?.fresh ? '是' : '否'}</dd></div>
-                  <div><dt>Auto Head</dt><dd>{autoHead?.state || '--'}</dd></div><div><dt>Motion 模式</dt><dd>{autoHead?.active ? 'HEAD_ONLY' : '--'}</dd></div>
+                  <div><dt>自动模式</dt><dd>{autoHead?.mode || '--'}</dd></div><div><dt>跟随状态</dt><dd>{autoHead?.followState || '--'}</dd></div>
+                  <div><dt>距离分级</dt><dd>{autoHead?.distanceClass || '--'}</dd></div><div><dt>底盘</dt><dd>{autoHead?.chassisMotion || 'STOPPED'}</dd></div>
+                  <div><dt>bbox 高 / 宽</dt><dd>{autoHead ? `${metric(autoHead.normalizedBboxHeight, 3)} / ${metric(autoHead.normalizedBboxWidth, 3)}` : '--'}</dd></div><div><dt>面积占比</dt><dd>{metric(autoHead?.normalizedBboxAreaRatio, 3)}</dd></div>
+                  <div><dt>物理头偏</dt><dd>{autoHead?.headOffsetAvailable ? `${autoHead.headDirection} / ${autoHead.headOffsetUs} us` : '--'}</dd></div><div><dt>目标稳定</dt><dd>{metric(autoHead?.targetStableMs, 0, ' ms')}</dd></div>
                   <div><dt>目标 dx / dy</dt><dd>{autoHead ? `${autoHead.dx} / ${autoHead.dy}` : '--'}</dd></div><div><dt>目标年龄</dt><dd>{metric(autoHead?.targetAgeMs, 0, ' ms')}</dd></div>
                 </dl>
               )}

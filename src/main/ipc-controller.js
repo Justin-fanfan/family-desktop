@@ -20,7 +20,9 @@ const CHANNELS = [
   'family:vision-monitor:start',
   'family:motion-control:start',
   'family:automatic-head-tracking:get',
-  'family:automatic-head-tracking:set'
+  'family:automatic-head-tracking:set',
+  'family:automatic-tracking:get',
+  'family:automatic-tracking:set'
 ];
 
 function success(data) {
@@ -99,6 +101,12 @@ class IpcController {
     );
     this.handle('family:automatic-head-tracking:set', async (_event, request) =>
       this.service.setAutomaticHeadTracking(request)
+    );
+    this.handle('family:automatic-tracking:get', async () =>
+      this.service.getAutomaticTracking()
+    );
+    this.handle('family:automatic-tracking:set', async (_event, request) =>
+      this.service.setAutomaticTracking(request)
     );
   }
 

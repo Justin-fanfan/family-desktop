@@ -516,3 +516,48 @@ AI 视野页通过普通 FamilyLink REST 读取和切换自动跟头，不直接
 - Emergency 事件。
 
 事件必须包含单调递增序列号或事件 ID，断线重连后通过 REST 全量刷新，不能只依赖易丢失的实时消息。
+## 12. V2.3 自动人物跟随
+
+### `GET /api/v1/automatic-tracking`
+
+读取统一自动视觉运动状态。该接口是 V2.3 首选接口，旧的
+`/api/v1/automatic-head-tracking` 继续保留兼容。
+
+关键返回字段：
+
+```json
+{
+  "enabled": true,
+  "active": true,
+  "mode": "PERSON_FOLLOW",
+  "followState": "ALIGNING",
+  "distanceClass": "FAR",
+  "normalizedBboxWidth": 0.22,
+  "normalizedBboxHeight": 0.31,
+  "normalizedBboxAreaRatio": 0.068,
+  "headDirection": "LEFT",
+  "headOffsetAvailable": true,
+  "headOffsetUs": -260,
+  "chassisMotion": "ROTATE_LEFT",
+  "targetAgeMs": 43,
+  "targetStableMs": 1280
+}
+```
+
+`headOffsetUs` 使用物理语义：负值为头部在机身左侧，正值为右侧，与舵机脉宽增减方向无关。
+
+### `PUT /api/v1/automatic-tracking`
+
+```json
+{ "mode": "PERSON_FOLLOW" }
+```
+
+`mode` 只允许：
+
+- `DISABLED`：关闭自动运动；
+- `HEAD_ONLY`：仅使用 TARGET 跟头，底盘硬禁止；
+- `PERSON_FOLLOW`：先跟头，再按物理头偏原地对齐，最后按归一化 bbox 高度决定低速前进或停车。
+
+人物跟随要求 Vision、Motion MCU 和 V2.3 `head_offset` 状态均可用；不满足时返回
+`409 AUTO_TRACK_REJECTED`。MANUAL、视频通话和 MCU 断线会关闭人物跟随，结束或重连后不会自动恢复。
+客户端能力字段为 `capabilities.automaticPersonFollowing`。

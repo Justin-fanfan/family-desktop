@@ -220,3 +220,24 @@ test('HTTP adapter reads and updates automatic head tracking', async () => {
     { method: 'PUT', url: '/api/v1/automatic-head-tracking', body: { enabled: true } }
   ]);
 });
+
+test('HTTP adapter reads and updates automatic person-follow mode', async () => {
+  const requests = [];
+  await withServer(async (request, response) => {
+    requests.push({ method: request.method, url: request.url, body: await readJson(request) });
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end(JSON.stringify({
+      mode: request.method === 'PUT' ? 'PERSON_FOLLOW' : 'DISABLED',
+      followState: request.method === 'PUT' ? 'ACQUIRING' : 'DISABLED'
+    }));
+  }, async (baseUrl) => {
+    const adapter = new HttpFamilyLinkAdapter({ baseUrl, token: 'pairing-token' });
+    assert.equal((await adapter.getAutomaticTracking()).mode, 'DISABLED');
+    assert.equal((await adapter.setAutomaticTracking({ mode: 'PERSON_FOLLOW' })).followState,
+      'ACQUIRING');
+  });
+  assert.deepEqual(requests, [
+    { method: 'GET', url: '/api/v1/automatic-tracking', body: null },
+    { method: 'PUT', url: '/api/v1/automatic-tracking', body: { mode: 'PERSON_FOLLOW' } }
+  ]);
+});

@@ -8,6 +8,7 @@ const {
   validateReminderDraft,
   validateSettingsPatch,
   validateAutomaticHeadTrackingUpdate,
+  validateAutomaticTrackingUpdate,
   validateVideoCallAction,
   validateVideoCallStart
 } = require('../src/main/services/family-link-service');
@@ -166,6 +167,27 @@ test('automatic head tracking validates boolean state and stays behind service b
   );
   assert.throws(
     () => validateAutomaticHeadTrackingUpdate({ enabled: true, mode: 'FOLLOW' }),
+    (error) => error.code === 'VALIDATION_ERROR'
+  );
+});
+
+test('automatic person following uses an explicit mutually-exclusive mode', async () => {
+  let captured = null;
+  const service = new FamilyLinkService({
+    async getAutomaticTracking() { return { mode: 'DISABLED' }; },
+    async setAutomaticTracking(request) {
+      captured = request;
+      return { mode: request.mode, followState: 'ACQUIRING' };
+    }
+  });
+  assert.equal((await service.getAutomaticTracking()).mode, 'DISABLED');
+  const result = await service.setAutomaticTracking({ mode: 'PERSON_FOLLOW' });
+  assert.deepEqual(captured, { mode: 'PERSON_FOLLOW' });
+  assert.equal(result.followState, 'ACQUIRING');
+  assert.deepEqual(validateAutomaticTrackingUpdate({ mode: 'HEAD_ONLY' }),
+    { mode: 'HEAD_ONLY' });
+  assert.throws(
+    () => validateAutomaticTrackingUpdate({ mode: 'FOLLOW_AND_MANUAL' }),
     (error) => error.code === 'VALIDATION_ERROR'
   );
 });

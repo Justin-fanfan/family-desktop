@@ -122,3 +122,15 @@ test('mock automatic head tracking is off by default and can be toggled', async 
   const disabled = await service.setAutomaticHeadTracking({ enabled: false });
   assert.equal(disabled.state, 'DISABLED');
 });
+
+test('mock automatic tracking modes are mutually exclusive', async () => {
+  const service = new FamilyLinkService(new MockFamilyLinkAdapter({ delayMs: 0 }));
+  const follow = await service.setAutomaticTracking({ mode: 'PERSON_FOLLOW' });
+  assert.equal(follow.mode, 'PERSON_FOLLOW');
+  assert.equal(follow.followState, 'ACQUIRING');
+  const head = await service.setAutomaticTracking({ mode: 'HEAD_ONLY' });
+  assert.equal(head.mode, 'HEAD_ONLY');
+  assert.equal(head.followState, 'DISABLED');
+  const disabled = await service.setAutomaticTracking({ mode: 'DISABLED' });
+  assert.equal(disabled.enabled, false);
+});

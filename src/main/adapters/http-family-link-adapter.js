@@ -82,6 +82,17 @@ class HttpFamilyLinkAdapter {
     });
   }
 
+  async getAutomaticTracking() {
+    return this.request('/api/v1/automatic-tracking');
+  }
+
+  async setAutomaticTracking(payload) {
+    return this.request('/api/v1/automatic-tracking', {
+      method: 'PUT',
+      body: payload
+    });
+  }
+
   async createReminder(payload) {
     return this.request('/api/v1/reminders', { method: 'POST', body: payload });
   }

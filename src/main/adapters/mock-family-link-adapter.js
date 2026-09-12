@@ -79,7 +79,18 @@ class MockFamilyLinkAdapter {
     this.automaticHeadTracking = clone(options.automaticHeadTracking ?? {
       enabled: false,
       active: false,
+      mode: 'DISABLED',
       state: 'DISABLED',
+      followState: 'DISABLED',
+      distanceClass: 'UNKNOWN',
+      headDirection: 'UNKNOWN',
+      headOffsetAvailable: true,
+      headOffsetUs: 0,
+      chassisMotion: 'STOPPED',
+      normalizedBboxWidth: 0,
+      normalizedBboxHeight: 0,
+      normalizedBboxAreaRatio: 0,
+      targetStableMs: 0,
       visionStatus: 'SEARCHING',
       frameSequence: 0,
       targetAgeMs: 0,
@@ -109,7 +120,8 @@ class MockFamilyLinkAdapter {
         videoCallSignaling: true,
         visionMonitor: false,
         motionControl: false,
-        automaticHeadTracking: true
+        automaticHeadTracking: true,
+        automaticPersonFollowing: true
       },
       device: {
         id: 'longpet-demo-001',
@@ -250,11 +262,37 @@ class MockFamilyLinkAdapter {
       ...this.automaticHeadTracking,
       enabled: payload.enabled,
       active: payload.enabled,
+      mode: payload.enabled ? 'HEAD_ONLY' : 'DISABLED',
       state: payload.enabled ? 'SEARCHING' : 'DISABLED',
+      followState: 'DISABLED',
       detail: payload.enabled ? 'HEAD_ONLY，等待新目标' : '自动跟随头部已关闭',
       dx: 0,
       dy: 0,
       area: 0,
+      updatedAt: nowIso()
+    };
+    return clone(this.automaticHeadTracking);
+  }
+
+  async getAutomaticTracking() {
+    return this.getAutomaticHeadTracking();
+  }
+
+  async setAutomaticTracking(payload) {
+    await this.wait();
+    const enabled = payload.mode !== 'DISABLED';
+    const following = payload.mode === 'PERSON_FOLLOW';
+    this.automaticHeadTracking = {
+      ...this.automaticHeadTracking,
+      enabled,
+      active: enabled,
+      mode: payload.mode,
+      state: enabled ? 'SEARCHING' : 'DISABLED',
+      followState: following ? 'ACQUIRING' : 'DISABLED',
+      detail: following
+        ? 'FOLLOW，等待稳定目标'
+        : enabled ? 'HEAD_ONLY，等待新目标' : '自动视觉运动已关闭',
+      chassisMotion: 'STOPPED',
       updatedAt: nowIso()
     };
     return clone(this.automaticHeadTracking);
